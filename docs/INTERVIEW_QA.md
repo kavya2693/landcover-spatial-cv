@@ -23,7 +23,7 @@ Each example is a small color image: 64 pixels wide, 64 pixels tall, with 3 chan
 EuroSAT patches are 64×64 because they come from Sentinel-2 satellite tiles at 10-meter resolution, so one patch covers a real-world area of about 640×640 meters. That is enough to see the *texture* of land use (the regular grid of a crop field, the rough canopy of a forest) even if you cannot see individual objects. Small images are also cheaper to train, which matters here because we train on a CPU. The trade-off: fine details are lost, so visually similar classes can be confused.
 
 ### Q1.5 — How did you split the data into train and test sets?
-The baseline uses a **random split**, typically something like 70% train / 15% validation / 15% test, with the split stratified so each class keeps its proportion in every part. The training set is what the model learns from, the validation set is used to tune choices and watch for overfitting, and the test set is touched only once at the end to report honest performance. The critical caveat — explored in Section 6 — is that a *random* split can leak information when images are spatially close on the map.
+The baseline uses a **random 80/20 train/validation split** with a fixed random seed (42) so the split is reproducible — the same images land in the same side every run, making results comparable across experiments. The training set (21,600 images) is what the model learns from; the validation set (5,400 images) is never trained on and gives an honest read on generalization. A natural upgrade is a three-way train/validation/test split with stratification by class. The critical caveat — explored in Section 6 — is that *any* random split can leak information when images are spatially close on the map.
 
 ---
 

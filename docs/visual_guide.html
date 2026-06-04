@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Visual Guide — How Your Land-Cover Classifier Works</title>
+<style>
+  :root { --bg:#0f1419; --card:#1a2129; --ink:#e8edf2; --dim:#8b9aab; --accent:#4fc3f7; --good:#66bb6a; --bad:#ef5350; --warn:#ffa726; }
+  * { box-sizing: border-box; }
+  body { background:var(--bg); color:var(--ink); font-family:-apple-system,'Segoe UI',sans-serif; margin:0; padding:24px; line-height:1.6; }
+  .wrap { max-width:980px; margin:0 auto; }
+  h1 { color:var(--accent); font-size:1.7em; }
+  h2 { color:var(--accent); border-bottom:1px solid #2a3542; padding-bottom:8px; margin-top:48px; }
+  .card { background:var(--card); border-radius:12px; padding:20px 24px; margin:16px 0; }
+  .dim { color:var(--dim); font-size:0.92em; }
+  canvas { border-radius:8px; display:block; margin:12px auto; background:#0a0e12; }
+  .row { display:flex; gap:16px; flex-wrap:wrap; align-items:center; justify-content:center; }
+  button { background:var(--accent); color:#04222e; border:none; border-radius:8px; padding:9px 18px; font-size:0.95em; font-weight:600; cursor:pointer; }
+  button:hover { filter:brightness(1.15); }
+  .big { font-size:2.2em; font-weight:700; }
+  .metric { text-align:center; padding:12px 22px; }
+  .pill { display:inline-block; background:#243140; border-radius:20px; padding:2px 12px; margin:2px; font-size:0.85em; }
+  table { border-collapse:collapse; margin:10px auto; }
+  td, th { padding:6px 12px; text-align:center; border:1px solid #2a3542; }
+  .frozen { color:#90caf9; } .trainable { color:var(--warn); }
+  .takeaway { border-left:4px solid var(--good); padding-left:14px; margin:14px 0; }
+  code { background:#243140; padding:2px 6px; border-radius:5px; font-size:0.9em; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>🛰️ How Your Land-Cover Classifier Works — Visually</h1>
+<p class="dim">Interactive companion to <code>src/train.py</code>. Every number on this page comes from the model YOU just trained (3 epochs, MacBook CPU, ~7 minutes).</p>
+
+<div class="row">
+  <div class="card metric"><div class="big" style="color:var(--good)">85.1%</div><div class="dim">validation accuracy</div></div>
+  <div class="card metric"><div class="big" style="color:var(--accent)">0.834</div><div class="dim">Cohen's kappa</div></div>
+  <div class="card metric"><div class="big">27,000</div><div class="dim">satellite patches</div></div>
+  <div class="card metric"><div class="big">10</div><div class="dim">land-cover classes</div></div>
+</div>
+
+<!-- ============ 1. IMAGE = NUMBERS ============ -->
+<h2>1 — An image is just a grid of numbers</h2>
+<div class="card">
+  <p>Hover (or tap) any pixel. What you see as "colour" the model sees as three numbers: Red, Green, Blue intensity (0–255). A 64×64 EuroSAT patch = <b>64 × 64 × 3 = 12,288 numbers</b>. This demo shows a simplified 16×16 "river through fields" patch.</p>
+  <canvas id="pixelCanvas" width="480" height="480"></canvas>
+  <p id="pixelReadout" class="dim" style="text-align:center">Hover a pixel…</p>
+  <div class="takeaway"><b>Interview line:</b> "The input is a 3×64×64 tensor — classification means mapping 12,288 numbers to one of 10 labels."</div>
+</div>
+
+<!-- ============ 2. CONVOLUTION ============ -->
+<h2>2 — A convolution slides a tiny pattern-detector across the image</h2>
+<div class="card">
+  <p>This is the core CNN operation. A 3×3 filter (here: a <b>vertical-edge detector</b>) slides across the patch. Bright output = "my pattern is HERE". Watch it light up exactly along the river's edges — that's how the network finds rivers, roads, and field boundaries.</p>
+  <div class="row">
+    <div><p class="dim" style="text-align:center;margin:4px">Input image</p><canvas id="convIn" width="320" height="320"></canvas></div>
+    <div><p class="dim" style="text-align:center;margin:4px">Filter output (edges found)</p><canvas id="convOut" width="320" height="320"></canvas></div>
+  </div>
+  <div class="row"><button id="convBtn">▶ Slide the filter</button><span class="dim" id="convStatus"></span></div>
+  <p>ResNet18 stacks <b>18 layers</b> of these: layer 1 finds edges → middle layers combine edges into textures (forest canopy, crop rows) → deep layers recognise whole concepts ("street grid" → Residential).</p>
+  <div class="takeaway"><b>Interview line:</b> "Convolutions exploit locality and translation invariance — a river edge means the same thing anywhere in the image."</div>
+</div>
+
+<!-- ============ 3. TRANSFER LEARNING ============ -->
+<h2>3 — Transfer learning: we only trained the last layer</h2>
+<div class="card">
+  <canvas id="tlCanvas" width="900" height="270"></canvas>
+  <p><span class="frozen">■ Blue layers (11.2M parameters)</span> — pre-trained on 1.2M ImageNet photos, <b>FROZEN</b> (never change). <span class="trainable">■ Orange layer (5,130 parameters)</span> — brand new, the only thing that learned. That's <b>0.05%</b> of the model — and why training took minutes on a CPU instead of days on a GPU.</p>
+  <div class="takeaway"><b>Interview line:</b> "I froze the backbone as a fixed feature extractor and trained a 512→10 linear head — strong baseline, minimal compute, hard to overfit."</div>
+</div>
+
+<!-- ============ 4. TRAINING LOOP + YOUR REAL CURVES ============ -->
+<h2>4 — Learning = guess → measure → adjust (your actual run)</h2>
+<div class="card">
+  <p>Each epoch, the model saw all 21,600 training images. The loss (wrongness) fell, accuracy rose. These are YOUR real numbers from <code>outputs/train_log.txt</code>:</p>
+  <canvas id="curveCanvas" width="860" height="320"></canvas>
+  <table>
+    <tr><th>Epoch</th><th>Loss ↓</th><th>Val accuracy ↑</th><th>Kappa ↑</th><th>Time</th></tr>
+    <tr><td>1</td><td>0.941</td><td>82.5%</td><td>0.805</td><td>137s</td></tr>
+    <tr><td>2</td><td>0.541</td><td>84.9%</td><td>0.832</td><td>139s</td></tr>
+    <tr><td>3</td><td>0.473</td><td><b>85.1%</b></td><td><b>0.834</b></td><td>134s</td></tr>
+  </table>
+  <p class="dim">Notice: big jump epoch 1→2, tiny jump 2→3. The frozen-backbone head is close to its ceiling — more epochs would buy little. Breaking that ceiling = fine-tuning deeper layers (a later experiment).</p>
+</div>
+
+<!-- ============ 5. CONFUSION MATRIX STORY ============ -->
+<h2>5 — Where it fails tells you more than the score</h2>
+<div class="card">
+  <p>The two biggest mistakes from your confusion matrix, and <i>why</i> they make sense:</p>
+  <div class="row">
+    <div class="card metric" style="background:#243140"><div class="big" style="color:var(--bad)">81×</div><div>River predicted as <b>Highway</b></div><div class="dim">both are long linear strips cutting across terrain</div></div>
+    <div class="card metric" style="background:#243140"><div class="big" style="color:var(--bad)">49×</div><div>PermanentCrop as <b>HerbaceousVegetation</b></div><div class="dim">both are "green field texture" at 10m resolution</div></div>
+  </div>
+  <p><b>Why kappa, not just accuracy?</b> With 10 classes, blind guessing scores ~10%; always guessing the biggest class scores ~11%. Kappa rescales so 0 = chance, 1 = perfect. Your 0.834 says: <i>"83.4% of the gap between chance and perfection has been closed."</i> Accuracy alone can't say that.</p>
+  <div class="takeaway"><b>Interview line:</b> "Errors concentrated on semantically similar pairs — linear features and vegetation types — not random noise. That tells me the model learned real structure."</div>
+</div>
+
+<!-- ============ 6. WHAT'S NEXT ============ -->
+<h2>6 — The trap we set up to expose next: spatial leakage</h2>
+<div class="card">
+  <canvas id="spatialCanvas" width="860" height="280"></canvas>
+  <div class="row"><button id="spatialBtn">Toggle: Random split ↔ Spatial split</button></div>
+  <p id="spatialText">In a <b>random split</b>, neighbouring patches from the <i>same farm</i> land in both train (blue) and validation (orange). The model partly "recognises the place" instead of "understanding cropland" — inflating the score. Click the button.</p>
+  <div class="takeaway"><b>The signature finding (Phase B):</b> re-validate with geographically separated folds, and report exactly how many points of accuracy were an illusion. This is what makes the project senior-level.</div>
+</div>
+
+<p class="dim" style="margin-top:40px">Next: <code>docs/LEARNING.md</code> for depth · <code>docs/INTERVIEW_QA.md</code> to practice · Phase B = spatial cross-validation</p>
+</div>
+
+<script>
+// ---------- 1. PIXEL GRID ----------
+const N = 16, CELL = 30;
+// Build a synthetic "river through fields" patch: green fields, dark blue diagonal river, brown field block
+const px = [];
+for (let y = 0; y < N; y++) { px.push([]);
+  for (let x = 0; x < N; x++) {
+    let r, g, b;
+    const onRiver = Math.abs((x - 2) - y * 0.55) < 1.3;
+    if (onRiver) { r = 28 + (x*7)%14; g = 60 + (y*5)%18; b = 110 + (x*y)%30; }
+    else if (x > 10 && y < 7) { r = 150 + (x*9)%25; g = 110 + (y*7)%20; b = 70 + (x+y)%15; }  // ploughed field
+    else { r = 60 + (x*13)%30; g = 120 + (y*11)%40; b = 50 + (x*y)%20; }                       // green fields
+    px[y].push([r, g, b]);
+  }
+}
+const pc = document.getElementById('pixelCanvas'), pctx = pc.getContext('2d');
+function drawPixels(hx, hy) {
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const [r, g, b] = px[y][x];
+    pctx.fillStyle = `rgb(${r},${g},${b})`;
+    pctx.fillRect(x*CELL, y*CELL, CELL-1, CELL-1);
+    if (x === hx && y === hy) { pctx.strokeStyle = '#fff'; pctx.lineWidth = 2.5; pctx.strokeRect(x*CELL+1, y*CELL+1, CELL-3, CELL-3); }
+  }
+}
+drawPixels(-1, -1);
+pc.addEventListener('mousemove', e => {
+  const rect = pc.getBoundingClientRect();
+  const x = Math.floor((e.clientX - rect.left) / rect.width * N);
+  const y = Math.floor((e.clientY - rect.top) / rect.height * N);
+  if (x < 0 || x >= N || y < 0 || y >= N) return;
+  drawPixels(x, y);
+  const [r, g, b] = px[y][x];
+  document.getElementById('pixelReadout').innerHTML =
+    `pixel (${x},${y}) → the model sees: <b style="color:#ff8a80">R=${r}</b>, <b style="color:#b9f6ca">G=${g}</b>, <b style="color:#82b1ff">B=${b}</b>` +
+    (b > r && b > g ? ' — high blue: probably <b>water</b>' : g > r ? ' — high green: probably <b>vegetation</b>' : ' — reddish-brown: probably <b>soil/built</b>');
+});
+
+// ---------- 2. CONVOLUTION ----------
+const ci = document.getElementById('convIn').getContext('2d');
+const co = document.getElementById('convOut').getContext('2d');
+const CC = 20; // cell size for 16x16 on 320px
+// grayscale version of px for conv demo
+const gray = px.map(row => row.map(([r, g, b]) => 0.3*r + 0.6*g + 0.1*b));
+const K = [[-1,0,1],[-2,0,2],[-1,0,1]]; // Sobel vertical-edge
+let convPos = -1, convTimer = null;
+const outVals = Array.from({length: N}, () => Array(N).fill(null));
+function drawConv() {
+  // input
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const [r, g, b] = px[y][x];
+    ci.fillStyle = `rgb(${r},${g},${b})`;
+    ci.fillRect(x*CC, y*CC, CC-1, CC-1);
+  }
+  // filter window highlight
+  if (convPos >= 0) {
+    const fy = Math.floor(convPos / 14), fx = convPos % 14;
+    ci.strokeStyle = '#ffeb3b'; ci.lineWidth = 2.5;
+    ci.strokeRect(fx*CC+1, fy*CC+1, 3*CC-3, 3*CC-3);
+  }
+  // output
+  co.fillStyle = '#0a0e12'; co.fillRect(0, 0, 320, 320);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    if (outVals[y][x] !== null) {
+      const v = Math.min(255, Math.abs(outVals[y][x]) / 2.2);
+      co.fillStyle = `rgb(${v},${v*0.85},${v*0.2})`;
+      co.fillRect(x*CC, y*CC, CC-1, CC-1);
+    }
+  }
+}
+function stepConv() {
+  convPos++;
+  if (convPos >= 14*14) { clearInterval(convTimer); convTimer = null;
+    document.getElementById('convStatus').textContent = 'Done — the bright diagonal IS the river edge, found automatically.'; drawConv(); return; }
+  const fy = Math.floor(convPos / 14), fx = convPos % 14;
+  let s = 0;
+  for (let ky = 0; ky < 3; ky++) for (let kx = 0; kx < 3; kx++) s += K[ky][kx] * gray[fy+ky][fx+kx];
+  outVals[fy+1][fx+1] = s;
+  document.getElementById('convStatus').textContent = `position ${convPos+1}/196 — weighted sum = ${s.toFixed(0)}`;
+  drawConv();
+}
+drawConv();
+document.getElementById('convBtn').addEventListener('click', () => {
+  if (convTimer) return;
+  convPos = -1; for (const row of outVals) row.fill(null);
+  convTimer = setInterval(stepConv, 36);
+});
+
+// ---------- 3. TRANSFER LEARNING DIAGRAM ----------
+const tl = document.getElementById('tlCanvas').getContext('2d');
+(function drawTL() {
+  tl.font = '13px -apple-system'; tl.textAlign = 'center';
+  const layers = [
+    {x: 30,  w: 80,  h: 200, label: 'input\n64×64×3', c: '#37474f'},
+    {x: 130, w: 95,  h: 180, label: 'conv1\nedges', c: '#1565c0'},
+    {x: 245, w: 95,  h: 160, label: 'layer1-2\ntextures', c: '#1976d2'},
+    {x: 360, w: 95,  h: 140, label: 'layer3\nparts', c: '#1e88e5'},
+    {x: 475, w: 95,  h: 120, label: 'layer4\nconcepts', c: '#2196f3'},
+    {x: 590, w: 80,  h: 90,  label: 'pool\n512 nums', c: '#42a5f5'},
+    {x: 700, w: 95,  h: 70,  label: 'NEW head\n512→10', c: '#ef6c00'},
+  ];
+  for (const L of layers) {
+    const y = 135 - L.h/2;
+    tl.fillStyle = L.c; tl.beginPath(); tl.roundRect(L.x, y, L.w, L.h, 8); tl.fill();
+    tl.fillStyle = '#fff';
+    L.label.split('\n').forEach((t, i) => tl.fillText(t, L.x + L.w/2, 132 + i*16));
+    if (L.x < 690 && L.x > 100) { tl.fillStyle = '#90caf9'; tl.fillText('🧊', L.x + L.w/2, y + 18); }
+  }
+  tl.fillStyle = '#ffa726'; tl.fillText('🔥 trains', 747, 80);
+  tl.fillStyle = '#8b9aab';
+  for (let i = 0; i < 6; i++) { tl.fillText('→', layers[i].x + layers[i].w + 10, 138); }
+  tl.fillText('→ "Forest" ✓', 850, 138);
+  tl.fillStyle = '#90caf9'; tl.textAlign = 'left';
+  tl.fillText('🧊 = frozen (ImageNet knowledge, reused)', 30, 255);
+})();
+
+// ---------- 4. TRAINING CURVES ----------
+const cv = document.getElementById('curveCanvas').getContext('2d');
+(function drawCurves() {
+  const W = 860, H = 320, padL = 60, padB = 45, padT = 25;
+  const loss = [0.9408, 0.5407, 0.4727], acc = [0.8248, 0.8489, 0.8509];
+  const X = i => padL + i * (W - padL - 40) / 2;
+  cv.font = '13px -apple-system';
+  // axes
+  cv.strokeStyle = '#2a3542'; cv.beginPath(); cv.moveTo(padL, padT); cv.lineTo(padL, H-padB); cv.lineTo(W-30, H-padB); cv.stroke();
+  // loss line (scale 0..1 → plot)
+  const Yl = v => padT + (1 - v) * (H - padT - padB);
+  cv.strokeStyle = '#ef5350'; cv.lineWidth = 3; cv.beginPath();
+  loss.forEach((v, i) => i ? cv.lineTo(X(i), Yl(v)) : cv.moveTo(X(i), Yl(v))); cv.stroke();
+  // acc line (scale 0.78..0.88)
+  const Ya = v => padT + (0.88 - v) / 0.10 * (H - padT - padB);
+  cv.strokeStyle = '#66bb6a'; cv.beginPath();
+  acc.forEach((v, i) => i ? cv.lineTo(X(i), Ya(v)) : cv.moveTo(X(i), Ya(v))); cv.stroke();
+  // points + labels
+  loss.forEach((v, i) => { cv.fillStyle = '#ef5350'; cv.beginPath(); cv.arc(X(i), Yl(v), 5, 0, 7); cv.fill();
+    cv.fillText(v.toFixed(2), X(i)+10, Yl(v)); });
+  acc.forEach((v, i) => { cv.fillStyle = '#66bb6a'; cv.beginPath(); cv.arc(X(i), Ya(v), 5, 0, 7); cv.fill();
+    cv.fillText((v*100).toFixed(1)+'%', X(i)+10, Ya(v)+14); });
+  cv.fillStyle = '#8b9aab'; cv.textAlign = 'center';
+  [1,2,3].forEach((e, i) => cv.fillText('epoch ' + e, X(i), H - 18));
+  cv.textAlign = 'left';
+  cv.fillStyle = '#ef5350'; cv.fillText('● training loss (wrongness — falling = learning)', padL + 10, 22);
+  cv.fillStyle = '#66bb6a'; cv.fillText('● validation accuracy (on 5,400 unseen images)', padL + 360, 22);
+})();
+
+// ---------- 6. SPATIAL SPLIT ----------
+const sp = document.getElementById('spatialCanvas').getContext('2d');
+let spatialMode = false;
+// fixed pseudo-random farm map (seeded by index so it never changes)
+function drawSpatial() {
+  sp.clearRect(0, 0, 860, 280);
+  const cols = 24, rows = 7, cw = 32, ch = 32, ox = 25, oy = 20;
+  sp.font = '12px -apple-system';
+  for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+    let isVal;
+    if (spatialMode) isVal = x >= 17;                          // spatial: right region held out
+    else isVal = ((x * 7 + y * 13 + 3) % 5) === 0;             // random: scattered
+    sp.fillStyle = isVal ? '#ef6c00' : '#1976d2';
+    sp.fillRect(ox + x*cw, oy + y*ch, cw - 2, ch - 2);
+  }
+  // farm overlay — a "farm" spanning neighbouring cells
+  sp.strokeStyle = '#ffeb3b'; sp.lineWidth = 2.5;
+  sp.strokeRect(ox + 7*cw - 3, oy + 2*ch - 3, 3*cw + 4, 2*ch + 4);
+  sp.fillStyle = '#ffeb3b';
+  sp.fillText('← one farm: 6 nearly identical neighbouring patches', ox + 10.3*cw, oy + 3*ch);
+  sp.fillStyle = '#1976d2'; sp.fillRect(ox, 262, 12, 12); sp.fillStyle = '#e8edf2'; sp.fillText('train', ox + 18, 272);
+  sp.fillStyle = '#ef6c00'; sp.fillRect(ox + 70, 262, 12, 12); sp.fillStyle = '#e8edf2'; sp.fillText('validation', ox + 88, 272);
+  sp.fillStyle = spatialMode ? '#66bb6a' : '#ef5350';
+  sp.fillText(spatialMode ? 'SPATIAL SPLIT: validation is a region the model has NEVER seen — honest score.'
+                          : 'RANDOM SPLIT: the yellow farm leaks into BOTH sets — the model can cheat by recognising the place.', ox + 200, 272);
+}
+drawSpatial();
+document.getElementById('spatialBtn').addEventListener('click', () => {
+  spatialMode = !spatialMode; drawSpatial();
+  document.getElementById('spatialText').innerHTML = spatialMode
+    ? 'Now the validation patches (orange) are a <b>geographically separate region</b>. No farm appears on both sides. Scores usually <b>drop</b> — and that drop is the honest truth Phase B will measure.'
+    : 'In a <b>random split</b>, neighbouring patches from the <i>same farm</i> land in both train (blue) and validation (orange). The model partly "recognises the place" instead of "understanding cropland" — inflating the score.';
+});
+</script>
+</body>
+</html>

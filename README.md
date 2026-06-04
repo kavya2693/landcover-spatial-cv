@@ -6,7 +6,9 @@ Classifying 27,000 EuroSAT satellite patches into 10 land-cover classes (Forest,
 
 | Model | Split | Accuracy | Cohen's kappa |
 |---|---|---|---|
-| ResNet18 (frozen backbone, transfer learning) | random 80/20 | _training_ | _training_ |
+| ResNet18 (frozen backbone, transfer learning, 3 epochs, CPU) | random 80/20 | **85.1%** | **0.834** |
+
+Top confusions: River→Highway (81) — both linear features; PermanentCrop→HerbaceousVegetation (49) — similar vegetation texture at 10 m resolution.
 
 ![Confusion matrix](outputs/confusion_matrix.png)
 

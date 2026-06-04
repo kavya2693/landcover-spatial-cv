@@ -1,0 +1,7 @@
+{
+  "val_accuracy": 0.8509,
+  "cohen_kappa": 0.834,
+  "epochs": 3,
+  "subset": 1.0,
+  "model": "resnet18-frozen-backbone"
+}
