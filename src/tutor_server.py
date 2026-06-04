@@ -15,6 +15,7 @@ import json
 import re
 import subprocess
 import sys
+import threading
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -22,6 +23,11 @@ ROOT = Path(__file__).resolve().parent.parent
 DOCS = ROOT / "docs"
 PORT = 8787
 INFERENCE = Path.home() / ".claude/PAI/Tools/Inference.ts"
+INFERENCE_LEVEL = "standard"
+INFERENCE_TIMEOUT_S = 220  # CLI latency is high-variance (~2min measured)
+# Bound concurrent CLI forks — a burst of questions shouldn't spawn N processes
+# all competing for the same Claude subscription.
+_inference_slots = threading.Semaphore(2)
 
 sys.path.insert(0, str(ROOT / "src"))
 try:
@@ -50,18 +56,21 @@ Answer her question. Respond with ONLY a JSON object, no markdown fences, with E
   "visual_html": a COMPLETE self-contained HTML document (it becomes an iframe srcdoc) that VISUALLY
     teaches the answer with an ANIMATION. Rules: inline CSS+JS only, no external resources; dark theme
     (body background #0f1419, text #e8edf2, accent #4fc3f7, orange #ffa726, green #66bb6a); one
-    <canvas> about 520x300 animated with requestAnimationFrame; the animation must loop and genuinely
-    illustrate the concept (moving parts, labels); a one-line caption under the canvas.
-Keep visual_html under 4000 characters. Escape characters correctly so the whole response is valid JSON."""
+    <canvas width=480 height=240> animated with requestAnimationFrame; the animation must loop and
+    genuinely illustrate the concept with moving parts and 2-4 short labels.
+CRITICAL: keep visual_html COMPACT — under 1600 characters. Terse JS, single-letter variables fine,
+no comments inside it. Total response under 2400 characters. Valid JSON only."""
 
 
 def ask_model(question: str) -> dict | None:
     """Shell out to the PAI Inference tool; parse its JSON reply."""
     try:
-        proc = subprocess.run(
-            ["bun", str(INFERENCE), "--level", "standard", "--timeout", "90000",
-             SYSTEM_PROMPT, question],
-            capture_output=True, text=True, timeout=100)
+        with _inference_slots:
+            proc = subprocess.run(
+                ["bun", str(INFERENCE), "--level", INFERENCE_LEVEL,
+                 "--timeout", str(INFERENCE_TIMEOUT_S * 1000),
+                 SYSTEM_PROMPT, question],
+                capture_output=True, text=True, timeout=INFERENCE_TIMEOUT_S + 10)
         raw = proc.stdout.strip()
         # Models sometimes wrap JSON in ```json fences — strip them.
         raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.MULTILINE)
@@ -70,6 +79,7 @@ def ask_model(question: str) -> dict | None:
             return None
         data = json.loads(raw[start:end + 1])
         if {"answer", "visual_html", "tab_title"} <= data.keys():
+            data["source"] = "ai"  # each producer labels its own answers
             return data
     except (subprocess.TimeoutExpired, json.JSONDecodeError, OSError):
         pass
@@ -111,7 +121,6 @@ class TutorHandler(SimpleHTTPRequestHandler):
             self.send_error(400, "expected JSON {question: ...}")
             return
         result = kb_answer(question) or ask_model(question) or apology()
-        result.setdefault("source", "ai")
         body = json.dumps(result).encode()
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
@@ -119,8 +128,8 @@ class TutorHandler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def log_message(self, fmt, *args):  # quieter logs
-        if "/ask" in (args[0] if args else ""):
+    def log_message(self, fmt, *args):  # quieter logs: only /ask and errors
+        if any("/ask" in str(a) for a in args) or "code" in fmt:
             super().log_message(fmt, *args)
 
 

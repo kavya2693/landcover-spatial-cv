@@ -317,7 +317,7 @@ document.getElementById('spatialBtn').addEventListener('click', () => {
   #askInput:focus { outline:none; border-color:var(--accent); }
   .typing { color:var(--dim); font-style:italic; }
   .typing::after { content:''; animation:dots 1.2s infinite; }
-  @keyframes dots { 0%{content:'thinking'} 33%{content:'thinking.'} 66%{content:'thinking..'} 100%{content:'thinking...'} }
+  @keyframes dots { 0%{content:''} 33%{content:'.'} 66%{content:'..'} 100%{content:'...'} }
   #tabModal { position:fixed; inset:0; background:rgba(5,8,12,.82); z-index:100; display:none;
     align-items:center; justify-content:center; }
   #tabModal.open { display:flex; }
@@ -353,9 +353,16 @@ then visit <a href="http://localhost:8787/visual_guide.html" style="color:#ffcc8
 
   // ---- state, persisted across refresh ----
   const store = key => JSON.parse(localStorage.getItem(key) || '[]');
-  const save = (key, v) => localStorage.setItem(key, JSON.stringify(v));
-  let history = store('tutorHistory');   // [{role, text, visual, source}]
-  let tabs = store('tutorTabs');         // [{title, answer, visual}]
+  const save = (key, v) => { try { localStorage.setItem(key, JSON.stringify(v)); }
+    catch (e) { /* quota full — drop oldest and retry once */
+      if (v.length > 5) { v.splice(0, v.length - 5); try { localStorage.setItem(key, JSON.stringify(v)); } catch (_) {} } } };
+  let history = store('tutorHistory').slice(-30);  // [{role, text, visual, source}], capped
+  let tabs = store('tutorTabs');                   // [{title, answer, visual}]
+
+  // single home for the security-relevant sandbox policy
+  const vizFrame = html => { const f = document.createElement('iframe');
+    f.setAttribute('sandbox', 'allow-scripts'); f.srcdoc = html; return f; };
+  const SOURCE_LABELS = { 'offline-kb': '📦 offline knowledge base', 'ai': '✨ Claude (live)' };
 
   // ---- section chips ----
   const SECTIONS = ['Image 1: pixels', 'Image 2: convolution', 'Image 3: transfer learning',
@@ -369,10 +376,9 @@ then visit <a href="http://localhost:8787/visual_guide.html" style="color:#ffcc8
   function bubble(m) {
     const d = document.createElement('div'); d.className = 'msg ' + m.role;
     d.textContent = m.text;
-    if (m.visual) { const f = document.createElement('iframe');
-      f.setAttribute('sandbox', 'allow-scripts'); f.srcdoc = m.visual; d.appendChild(f); }
+    if (m.visual) d.appendChild(vizFrame(m.visual));
     if (m.role === 'bot' && m.source) { const s = document.createElement('div'); s.className = 'src';
-      s.textContent = m.source === 'offline-kb' ? '📦 offline knowledge base' : m.source === 'ai' ? '✨ Claude (live)' : ''; d.appendChild(s); }
+      s.textContent = SOURCE_LABELS[m.source] || ''; d.appendChild(s); }
     $('chatLog').appendChild(d); $('chatLog').scrollTop = 1e9;
     return d;
   }
@@ -384,8 +390,7 @@ then visit <a href="http://localhost:8787/visual_guide.html" style="color:#ffcc8
         const h = document.createElement('h2'); h.textContent = t.title; h.style.marginTop = '0';
         const p = document.createElement('p'); p.textContent = t.answer;
         $('tabCard').append(h, p);
-        if (t.visual) { const f = document.createElement('iframe');
-          f.setAttribute('sandbox', 'allow-scripts'); f.srcdoc = t.visual; $('tabCard').appendChild(f); }
+        if (t.visual) $('tabCard').appendChild(vizFrame(t.visual));
         const x = document.createElement('button'); x.textContent = 'Close'; x.style.marginTop = '14px';
         x.onclick = () => $('tabModal').classList.remove('open');
         $('tabCard').appendChild(x);
@@ -401,7 +406,9 @@ then visit <a href="http://localhost:8787/visual_guide.html" style="color:#ffcc8
     if (isFile) { $('fileBanner').scrollIntoView({ behavior: 'smooth' }); return; }
     $('askInput').value = '';
     const um = { role: 'user', text: q }; history.push(um); save('tutorHistory', history); bubble(um);
-    const t = document.createElement('div'); t.className = 'msg bot typing'; $('chatLog').appendChild(t); $('chatLog').scrollTop = 1e9;
+    const t = document.createElement('div'); t.className = 'msg bot typing';
+    t.textContent = '🎨 drawing your visual explanation — instant if I know it, up to ~2 min if Claude draws it fresh';
+    $('chatLog').appendChild(t); $('chatLog').scrollTop = 1e9;
     $('askBtn').disabled = true;
     try {
       const r = await fetch('/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -409,7 +416,7 @@ then visit <a href="http://localhost:8787/visual_guide.html" style="color:#ffcc8
       const a = await r.json();
       t.remove();
       const bm = { role: 'bot', text: a.answer, visual: a.visual_html, source: a.source };
-      history.push(bm); save('tutorHistory', history); bubble(bm);
+      history.push(bm); history = history.slice(-30); save('tutorHistory', history); bubble(bm);
       if (a.is_extension && a.tab_title && a.visual_html && !tabs.some(x => x.title === a.tab_title)) {
         tabs.push({ title: a.tab_title, answer: a.answer, visual: a.visual_html });
         save('tutorTabs', tabs); renderTabs();
