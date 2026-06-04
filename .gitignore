@@ -1,0 +1,14 @@
+# Data — never commit datasets (large, and downloadable by anyone)
+data/
+
+# Python environment — machine-specific, recreated from requirements.txt
+.venv/
+__pycache__/
+*.pyc
+
+# Outputs that get regenerated
+outputs/*.png
+outputs/*.pt
+
+# OS noise
+.DS_Store
