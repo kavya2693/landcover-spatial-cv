@@ -285,5 +285,148 @@ document.getElementById('spatialBtn').addEventListener('click', () => {
     : 'In a <b>random split</b>, neighbouring patches from the <i>same farm</i> land in both train (blue) and validation (orange). The model partly "recognises the place" instead of "understanding cropland" — inflating the score.';
 });
 </script>
+
+<!-- ==================== AI TUTOR SIDEBAR ==================== -->
+<style>
+  body.tutor-open .wrap { max-width:none; margin-right:400px; }
+  #tutorPanel { position:fixed; top:0; right:0; width:380px; height:100vh; background:#141b23;
+    border-left:1px solid #2a3542; display:flex; flex-direction:column; z-index:50;
+    transition:transform .25s; box-shadow:-8px 0 24px rgba(0,0,0,.4); }
+  body:not(.tutor-open) #tutorPanel { transform:translateX(100%); }
+  #tutorToggle { position:fixed; right:16px; bottom:16px; z-index:60; border-radius:50%;
+    width:58px; height:58px; font-size:1.5em; padding:0; box-shadow:0 4px 16px rgba(0,0,0,.5); }
+  #tutorHead { padding:14px 16px 8px; border-bottom:1px solid #2a3542; }
+  #tutorHead h3 { margin:0; color:var(--accent); font-size:1.05em; }
+  #tabBar { display:flex; flex-wrap:wrap; gap:6px; padding:8px 16px; border-bottom:1px solid #2a3542; min-height:20px; }
+  .ctab { background:#243140; border:1px solid #3a4a5c; color:var(--warn); border-radius:16px;
+    padding:3px 12px; font-size:.8em; cursor:pointer; }
+  .ctab:hover { background:#2e4156; }
+  #chatLog { flex:1; overflow-y:auto; padding:12px 14px; display:flex; flex-direction:column; gap:10px; }
+  .msg { border-radius:12px; padding:9px 13px; font-size:.9em; max-width:95%; }
+  .msg.user { background:#1565c0; align-self:flex-end; }
+  .msg.bot { background:#243140; align-self:flex-start; width:95%; }
+  .msg.bot iframe { width:100%; height:240px; border:none; border-radius:8px; margin-top:8px; background:#0f1419; }
+  .msg .src { font-size:.72em; color:var(--dim); margin-top:6px; }
+  .expand { color:var(--accent); cursor:pointer; font-size:.8em; }
+  #chips { display:flex; flex-wrap:wrap; gap:5px; padding:6px 14px; }
+  .chip { background:#243140; border-radius:14px; padding:2px 10px; font-size:.75em; cursor:pointer; color:var(--dim); }
+  .chip:hover { color:var(--ink); background:#2e4156; }
+  #askRow { display:flex; gap:8px; padding:10px 14px 16px; }
+  #askInput { flex:1; background:#0f1419; border:1px solid #2a3542; border-radius:10px;
+    color:var(--ink); padding:10px 12px; font-size:.92em; }
+  #askInput:focus { outline:none; border-color:var(--accent); }
+  .typing { color:var(--dim); font-style:italic; }
+  .typing::after { content:''; animation:dots 1.2s infinite; }
+  @keyframes dots { 0%{content:'thinking'} 33%{content:'thinking.'} 66%{content:'thinking..'} 100%{content:'thinking...'} }
+  #tabModal { position:fixed; inset:0; background:rgba(5,8,12,.82); z-index:100; display:none;
+    align-items:center; justify-content:center; }
+  #tabModal.open { display:flex; }
+  #tabCard { background:var(--card); border-radius:14px; width:min(760px,92vw); max-height:88vh;
+    overflow-y:auto; padding:22px 26px; }
+  #tabCard iframe { width:100%; height:360px; border:none; border-radius:10px; background:#0f1419; }
+  #fileBanner { background:#5d4037; color:#ffe0b2; border-radius:10px; padding:12px 16px; margin:14px 0; display:none; }
+</style>
+
+<div id="fileBanner"><b>💬 To activate the AI tutor:</b> open Terminal and run<br>
+<code>cd ~/Documents/ml-portfolio/project-1-landcover && .venv/bin/python src/tutor_server.py</code><br>
+then visit <a href="http://localhost:8787/visual_guide.html" style="color:#ffcc80">http://localhost:8787/visual_guide.html</a></div>
+
+<button id="tutorToggle" title="AI Tutor">💬</button>
+<div id="tutorPanel">
+  <div id="tutorHead"><h3>🎓 AI Tutor — ask me anything</h3>
+    <span class="dim" style="font-size:.78em">Reference sections with the chips. New concepts become tabs ↓</span></div>
+  <div id="tabBar"></div>
+  <div id="chatLog"></div>
+  <div id="chips"></div>
+  <div id="askRow">
+    <input id="askInput" placeholder="e.g. why did Image 5 confuse rivers with highways?">
+    <button id="askBtn">➤</button>
+  </div>
+</div>
+<div id="tabModal"><div id="tabCard"></div></div>
+
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const isFile = location.protocol === 'file:';
+  if (isFile) { $('fileBanner').style.display = 'block'; document.querySelector('.wrap').prepend($('fileBanner')); }
+
+  // ---- state, persisted across refresh ----
+  const store = key => JSON.parse(localStorage.getItem(key) || '[]');
+  const save = (key, v) => localStorage.setItem(key, JSON.stringify(v));
+  let history = store('tutorHistory');   // [{role, text, visual, source}]
+  let tabs = store('tutorTabs');         // [{title, answer, visual}]
+
+  // ---- section chips ----
+  const SECTIONS = ['Image 1: pixels', 'Image 2: convolution', 'Image 3: transfer learning',
+                    'Image 4: training curves', 'Image 5: confusion matrix', 'Image 6: spatial split'];
+  SECTIONS.forEach(s => { const c = document.createElement('span'); c.className = 'chip'; c.textContent = s;
+    c.onclick = () => { $('askInput').value = ($('askInput').value + ' ' + s.split(':')[0]).trim() + ' ';
+      $('askInput').focus(); };
+    $('chips').appendChild(c); });
+
+  // ---- rendering ----
+  function bubble(m) {
+    const d = document.createElement('div'); d.className = 'msg ' + m.role;
+    d.textContent = m.text;
+    if (m.visual) { const f = document.createElement('iframe');
+      f.setAttribute('sandbox', 'allow-scripts'); f.srcdoc = m.visual; d.appendChild(f); }
+    if (m.role === 'bot' && m.source) { const s = document.createElement('div'); s.className = 'src';
+      s.textContent = m.source === 'offline-kb' ? '📦 offline knowledge base' : m.source === 'ai' ? '✨ Claude (live)' : ''; d.appendChild(s); }
+    $('chatLog').appendChild(d); $('chatLog').scrollTop = 1e9;
+    return d;
+  }
+  function renderTabs() {
+    $('tabBar').innerHTML = '';
+    tabs.forEach((t, i) => { const b = document.createElement('span'); b.className = 'ctab';
+      b.textContent = '📑 ' + t.title;
+      b.onclick = () => { $('tabCard').innerHTML = '';
+        const h = document.createElement('h2'); h.textContent = t.title; h.style.marginTop = '0';
+        const p = document.createElement('p'); p.textContent = t.answer;
+        $('tabCard').append(h, p);
+        if (t.visual) { const f = document.createElement('iframe');
+          f.setAttribute('sandbox', 'allow-scripts'); f.srcdoc = t.visual; $('tabCard').appendChild(f); }
+        const x = document.createElement('button'); x.textContent = 'Close'; x.style.marginTop = '14px';
+        x.onclick = () => $('tabModal').classList.remove('open');
+        $('tabCard').appendChild(x);
+        $('tabModal').classList.add('open'); };
+      $('tabBar').appendChild(b); });
+  }
+  history.forEach(bubble); renderTabs();
+  if (!history.length) bubble({ role: 'bot', text: 'Hi! I\'m your visual tutor. Ask me anything about the guide — tap a chip to reference a section, and I\'ll answer with an animation.', source: '' });
+
+  // ---- ask flow ----
+  async function ask() {
+    const q = $('askInput').value.trim(); if (!q) return;
+    if (isFile) { $('fileBanner').scrollIntoView({ behavior: 'smooth' }); return; }
+    $('askInput').value = '';
+    const um = { role: 'user', text: q }; history.push(um); save('tutorHistory', history); bubble(um);
+    const t = document.createElement('div'); t.className = 'msg bot typing'; $('chatLog').appendChild(t); $('chatLog').scrollTop = 1e9;
+    $('askBtn').disabled = true;
+    try {
+      const r = await fetch('/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: q }) });
+      const a = await r.json();
+      t.remove();
+      const bm = { role: 'bot', text: a.answer, visual: a.visual_html, source: a.source };
+      history.push(bm); save('tutorHistory', history); bubble(bm);
+      if (a.is_extension && a.tab_title && a.visual_html && !tabs.some(x => x.title === a.tab_title)) {
+        tabs.push({ title: a.tab_title, answer: a.answer, visual: a.visual_html });
+        save('tutorTabs', tabs); renderTabs();
+      }
+    } catch (e) {
+      t.remove(); bubble({ role: 'bot', text: '⚠️ Could not reach the tutor server. Is it running? See the banner instructions.', source: '' });
+    }
+    $('askBtn').disabled = false; $('askInput').focus();
+  }
+  $('askBtn').addEventListener('click', ask);
+  $('askInput').addEventListener('keydown', e => { if (e.key === 'Enter') ask(); });
+  $('tutorToggle').addEventListener('click', () => document.body.classList.toggle('tutor-open'));
+  $('tabModal').addEventListener('click', e => { if (e.target === $('tabModal')) $('tabModal').classList.remove('open'); });
+
+  // open by default when served (tutor available), closed on file://
+  if (!isFile) document.body.classList.add('tutor-open');
+})();
+</script>
 </body>
 </html>

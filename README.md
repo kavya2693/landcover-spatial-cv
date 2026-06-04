@@ -32,6 +32,13 @@ python src/train.py --epochs 3
 - [ ] Phase C — full Sentinel-2 tiles; CNN vs transformer; per-class IoU
 - [ ] Phase D — write-up framed around the spatial-CV finding
 
+## AI Tutor (visual guide chatbot)
+```bash
+.venv/bin/python src/tutor_server.py
+# then open http://localhost:8787/visual_guide.html
+```
+Ask questions in the sidebar (reference sections as "Image 1"…"Image 6"); answers arrive as animated visual explanations. New concepts become persistent tabs. Uses the local PAI Inference tool (Claude subscription — no API key); falls back to an offline knowledge base of 8 animated explainers.
+
 ## Repo guide
 - `src/explore_data.py` — dataset download + class distribution + sample grid
 - `src/train.py` — transfer-learning baseline (heavily commented for learning)
