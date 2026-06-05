@@ -41,7 +41,11 @@ Image 2 = "Convolution" (animated 3x3 vertical-edge filter sliding, river edges 
 Image 3 = "Transfer learning" (frozen blue ResNet18 layers + new orange 512->10 head)
 Image 4 = "Training curves" (their real run: loss 0.94->0.47, val acc 82.5%->85.1%, 3 epochs)
 Image 5 = "Confusion matrix" (top errors: River->Highway 81x, PermanentCrop->HerbaceousVegetation 49x; kappa 0.834)
-Image 6 = "Spatial leakage" (random vs spatial split toggle, same-farm patches leak)"""
+Image 6 = "Spatial leakage" (random vs spatial split toggle, same-farm patches leak)
+Phase B tab = the real experiment result: random 85.2% vs spatial-50km-blocks 85.6% — an honest
+NULL result (no measurable leakage; gap -0.4% is within noise). Hypothesis: the frozen backbone's
+tiny 5,130-param head lacks capacity to memorize places; Phase C will test if fine-tuning all 11M
+params reopens the gap. Coordinates came from GeoTIFF tags (tiepoint/scale/EPSG) via tifffile."""
 
 SYSTEM_PROMPT = f"""You are a warm, visual-first ML tutor inside an interactive guide. The student
 is a complete beginner building a EuroSAT land-cover classifier (27,000 Sentinel-2 patches, 64x64,

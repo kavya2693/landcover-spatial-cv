@@ -1,0 +1,15 @@
+{
+  "random": {
+    "accuracy": 0.8519,
+    "kappa": 0.835
+  },
+  "spatial": {
+    "accuracy": 0.8561,
+    "kappa": 0.8384
+  },
+  "gap_accuracy": -0.0043,
+  "gap_kappa": -0.0034,
+  "epochs": 3,
+  "block_km": 50,
+  "note": "single holdout per condition (CPU budget), identical training"
+}

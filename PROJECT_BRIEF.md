@@ -43,18 +43,20 @@ Written as verifiable end-states: each condition is binary-checkable — a file 
 - [x] `docs/visual_guide.html` — 6 interactive sections + AI tutor sidebar (instant KB + live Claude answers, concept tabs, refresh-persistent)
 - [x] Concepts covered live: labels/ImageFolder, supervised learning, train/val splits, "unseen" data
 
-### ⬜ Phase B — Spatial cross-validation (NEXT · the signature finding)
+### ✅ Phase B — Spatial cross-validation (COMPLETE 2026-06-05 · finding: honest null)
 
-**Build conditions:**
-- [ ] `src/spatial_cv.py` implements geographically-separated folds (no same-region patch in both train and val)
-- [ ] Same model evaluated under random vs spatial folds, same seed policy
-- [ ] **The honest gap is quantified and logged**: `outputs/spatial_gap.json` containing random-split accuracy, spatial-split accuracy, and the delta
-- [ ] README results table gains a "spatial CV" row; one paragraph states the finding in plain language
+**Build conditions — all met:**
+- [x] `src/spatial_cv.py` implements geographically-separated folds (50km blocks; 866 blocks, 147 held out; coordinates recovered from GeoTIFF tags via `src/extract_coords.py`)
+- [x] Same model evaluated under random vs spatial folds, same seed policy (identical training, only indices differ)
+- [x] **Gap quantified and logged**: `outputs/spatial_gap.json` — random 85.2% / spatial 85.6% / gap −0.4% (within noise)
+- [x] README results table gains spatial CV row + plain-language finding paragraph
+
+**The measured finding:** NO leakage gap in the frozen-backbone configuration — hypothesis: the 5,130-param head lacks memorization capacity. Phase C tests whether full fine-tuning reopens the gap. (Original brief assumed a positive gap; the apparatus was built, the experiment run, the null reported honestly.)
 
 **Learn conditions:**
-- [ ] LEARNING.md gains a "Spatial CV" layer (why distance ≈ similarity → leakage → fold design)
-- [ ] Tutor KB gains entries: spatial autocorrelation, cross-validation, k-fold
-- [ ] **Quiz gate:** Srikavya explains, unaided: (1) why random splits flatter satellite models, (2) what her measured gap was, (3) how the folds were built
+- [x] LEARNING.md Layer 5 (Tobler's law → leakage → fold design → null-result interpretation)
+- [x] Tutor KB entries: spatial autocorrelation, k-fold CV, GeoTIFF coordinates (11 total)
+- [ ] **Quiz gate (Srikavya's move):** score 12+/14 on the 🎯 Quiz tab, and explain unaided: (1) why random splits *can* flatter satellite models, (2) what her measured gap was and why it was null, (3) how the folds were built
 
 ### ⬜ Phase C — Scale & compare
 

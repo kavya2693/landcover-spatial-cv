@@ -80,9 +80,11 @@ Same architecture, epochs, learning rate, code path. Only the split differs — 
 
 **Honest footnote:** we ran one holdout per condition rather than full 5-fold CV — a deliberate CPU-budget tradeoff, stated in the output JSON. Full GroupKFold is the gold standard; say so if asked.
 
-**Reading the result** (live in the 🧪 Phase B tab): the spatial score is the model's true ability on *new geography*; the gap is how much the random split flattered us. Reporting that gap is the most senior-sounding sentence in your portfolio:
+**The measured result — a null finding, honestly reported.** Random 85.2% vs spatial 85.6%: **no gap** (−0.4% is within run-to-run noise). The leakage we hypothesized did not appear in this configuration. Why? The leading hypothesis: our backbone is *frozen* — only a 5,130-parameter linear head trains, and memorizing specific places needs capacity the head doesn't have. Spatial leakage bites hardest when the whole network can overfit. This sets up Phase C's sharpest question: *does fine-tuning all 11M parameters reopen the gap?*
 
-> "My random-split accuracy was X%, but spatially-blocked validation showed the honest number is Y% — I measured the leakage instead of shipping it."
+**Why a null result is interview GOLD.** Weak candidates report only flattering numbers. Strong ones build the apparatus, run the controlled experiment (identical training, only the split differs), report whatever comes out, and propose the follow-up. Your sentence:
+
+> "I hypothesized spatial leakage, recovered all 27k patch coordinates from GeoTIFF metadata, held out whole 50km blocks — and found no gap with a frozen backbone. My hypothesis is that leakage requires memorization capacity, which is exactly what Phase C tests by unfreezing the network."
 
 ## What's next (the project's remaining phases)
 - **Phase B**: ✅ done — see the 🧪 tab for your measured gap

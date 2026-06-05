@@ -527,15 +527,16 @@ then visit <a href="http://localhost:8787/visual_guide.html" style="color:#ffcc8
       if (!r.ok) return;
       const g = await r.json();
       const pct = v => (v * 100).toFixed(1) + '%';
+      const meaningful = g.gap_accuracy > 0.01;   // >1 point = real leakage signal
       $('gapCards').innerHTML =
-        `<div class="card metric"><div class="gapNum" style="color:var(--good)">${pct(g.random.accuracy)}</div><div class="dim">random split (flattering)</div></div>
-         <div class="card metric"><div class="gapNum" style="color:var(--warn)">${pct(g.spatial.accuracy)}</div><div class="dim">spatial split (honest)</div></div>
-         <div class="card metric"><div class="gapNum" style="color:var(--bad)">−${pct(g.gap_accuracy)}</div><div class="dim">the honest gap</div></div>`;
-      $('gapStory').innerHTML =
-        `<p><b>The finding:</b> validated on geography it had truly never seen, the model scores <b>${pct(g.spatial.accuracy)}</b> — ` +
-        `<b>${pct(g.gap_accuracy)} of the random-split score was a leakage illusion</b> (kappa: ${g.random.kappa} → ${g.spatial.kappa}). ` +
-        `${g.block_km}km blocks, ${g.epochs} epochs per condition, identical training. ` +
-        `Below: the actual map of held-out blocks (orange) per UTM zone.</p>`;
+        `<div class="card metric"><div class="gapNum" style="color:var(--accent)">${pct(g.random.accuracy)}</div><div class="dim">random split</div></div>
+         <div class="card metric"><div class="gapNum" style="color:var(--good)">${pct(g.spatial.accuracy)}</div><div class="dim">spatial split (honest test)</div></div>
+         <div class="card metric"><div class="gapNum" style="color:${meaningful ? 'var(--bad)' : 'var(--good)'}">${(g.gap_accuracy * 100).toFixed(1)}%</div><div class="dim">the gap</div></div>`;
+      $('gapStory').innerHTML = meaningful
+        ? `<p><b>The finding:</b> on geography it truly never saw, the model scores <b>${pct(g.spatial.accuracy)}</b> — <b>${pct(g.gap_accuracy)} of the random-split score was a leakage illusion</b> (kappa ${g.random.kappa} → ${g.spatial.kappa}). ${g.block_km}km blocks, ${g.epochs} epochs each, identical training.</p>`
+        : `<p><b>The finding — a honest NULL result:</b> the spatial score (${pct(g.spatial.accuracy)}) matched the random score (${pct(g.random.accuracy)}); the ${(g.gap_accuracy*100).toFixed(1)}% difference is within run noise. <b>No measurable spatial leakage in THIS configuration.</b></p>
+           <p><b>Why? The leading hypothesis:</b> our backbone is <i>frozen</i> — only a tiny 5,130-parameter head trains, which has almost no capacity to memorize specific places. Leakage inflates scores most when a model CAN memorize. That sets up Phase C's question: <b>does fine-tuning the full 11M parameters reopen the gap?</b></p>
+           <p class="dim">A negative result reported honestly — with the apparatus to detect the effect and a hypothesis for its absence — is stronger interview material than a fabricated drop. ${g.block_km}km blocks, ${g.epochs} epochs each, identical training. Honest caveat: single holdout per condition, not full k-fold.</p>`;
       $('blocksImg').src = '/spatial_blocks.png'; $('blocksImg').style.display = 'block';
     } catch (e) { /* file:// or server down — placeholder stays */ }
   }

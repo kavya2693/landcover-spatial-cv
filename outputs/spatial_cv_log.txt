@@ -3,3 +3,26 @@ Random split:
   [random] epoch 1/3 (120s)
   [random] epoch 2/3 (113s)
   [random] epoch 3/3 (115s)
+  random:  acc 0.8519  kappa 0.8350
+Spatial split:
+  spatial: 866 blocks total, 147 held out -> 5401 val images
+  [spatial] epoch 1/3 (116s)
+  [spatial] epoch 2/3 (108s)
+  [spatial] epoch 3/3 (107s)
+  spatial: acc 0.8561  kappa 0.8384
+  saved /Users/srikavya/Documents/ml-portfolio/project-1-landcover/outputs/spatial_blocks.png
+{
+  "random": {
+    "accuracy": 0.8519,
+    "kappa": 0.835
+  },
+  "spatial": {
+    "accuracy": 0.8561,
+    "kappa": 0.8384
+  },
+  "gap_accuracy": -0.0043,
+  "gap_kappa": -0.0034,
+  "epochs": 3,
+  "block_km": 50,
+  "note": "single holdout per condition (CPU budget), identical training"
+}

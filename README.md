@@ -6,9 +6,12 @@ Classifying 27,000 EuroSAT satellite patches into 10 land-cover classes (Forest,
 
 | Model | Split | Accuracy | Cohen's kappa |
 |---|---|---|---|
-| ResNet18 (frozen backbone, transfer learning, 3 epochs, CPU) | random 80/20 | **85.1%** | **0.834** |
+| ResNet18 (frozen backbone, transfer learning, 3 epochs, CPU) | random 80/20 | **85.2%** | 0.835 |
+| ResNet18 (identical training) | **spatial 50km blocks** | **85.6%** | 0.838 |
 
 Top confusions: River→Highway (81) — both linear features; PermanentCrop→HerbaceousVegetation (49) — similar vegetation texture at 10 m resolution.
+
+**Phase B finding (honest null result):** patch coordinates were recovered from EuroSAT's multispectral GeoTIFF metadata (tiepoint/scale/EPSG tags, parsed with `tifffile`), and whole 50 km blocks were held out so no neighbouring patch could leak across the split. The spatial score *matched* the random score (−0.4%, within noise): **no measurable spatial leakage in the frozen-backbone configuration** — consistent with the 5,130-parameter trainable head having little capacity to memorize places. Phase C tests whether full fine-tuning (11M parameters) reopens the gap. Caveat: single holdout per condition (CPU budget), not full GroupKFold.
 
 ![Confusion matrix](outputs/confusion_matrix.png)
 
@@ -28,7 +31,7 @@ python src/train.py --epochs 3
 
 ## Roadmap
 - [x] Phase A — ResNet18 baseline on EuroSAT, accuracy + kappa + confusion matrix
-- [ ] Phase B — spatial cross-validation; quantify the random-vs-spatial gap
+- [x] Phase B — spatial cross-validation; gap measured: none (frozen backbone) — see finding above
 - [ ] Phase C — full Sentinel-2 tiles; CNN vs transformer; per-class IoU
 - [ ] Phase D — write-up framed around the spatial-CV finding
 
