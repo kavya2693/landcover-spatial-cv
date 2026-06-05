@@ -1,0 +1,221 @@
+{
+ "version": 1,
+ "questions": [
+  {
+   "id": "d1",
+   "topic": "Data & Problem",
+   "q": "What is EuroSAT exactly?",
+   "a": "EuroSAT is a public benchmark dataset for land-cover classification, made of 27,000 small image patches cut from Sentinel-2 satellite scenes over Europe. Every patch is labelled with one of 10 land-cover types, such as Forest, River, Industrial, Pasture, and AnnualCrop. Each patch is tiny by photo standards, just 64x64 pixels, because it covers a small ground footprint at the satellite's resolution. In this project we use the RGB version of EuroSAT, and the task is to look at one patch and predict which of the 10 classes it shows."
+  },
+  {
+   "id": "d2",
+   "topic": "Data & Problem",
+   "q": "What is a Sentinel-2 satellite and who runs it?",
+   "a": "Sentinel-2 is a pair of Earth-observation satellites operated by the European Space Agency (ESA) as part of the European Union's Copernicus programme. They orbit the planet and photograph the land surface repeatedly, giving free, regularly updated imagery used for agriculture, forestry, and environmental monitoring. Each pixel in their standard imagery represents about 10 metres on the ground, which is why our 64x64 patches cover a real area rather than a close-up. EuroSAT's 27,000 patches were all carved out of these Sentinel-2 scenes."
+  },
+  {
+   "id": "d3",
+   "topic": "Data & Problem",
+   "q": "What is the difference between our RGB jpgs and the multispectral version, and why does near-infrared matter?",
+   "a": "Our RGB jpgs hold only 3 colour channels (red, green, blue), the same three a normal camera captures. The full Sentinel-2 product is multispectral, with 13 bands that also record light our eyes cannot see, including near-infrared (NIR). NIR matters because healthy vegetation reflects a lot of near-infrared light, so plants look very bright in that band even when they look similar in plain colour. That makes NIR a powerful clue for separating crops, pasture, and forest, which is why remote-sensing models often use the multispectral version rather than just RGB like we do here."
+  },
+  {
+   "id": "d4",
+   "topic": "Data & Problem",
+   "q": "What is a tensor and what shape is one of our images?",
+   "a": "A tensor is just a grid of numbers with a known shape, the basic data container deep-learning libraries like PyTorch work with. A single number is a 0-D tensor, a list is 1-D, a table is 2-D, and an image is 3-D. One of our EuroSAT images is a tensor of shape 3x64x64: 3 colour channels, each a 64-pixel-tall by 64-pixel-wide grid. When we train, we stack 128 of these together into a batch tensor of shape 128x3x64x64."
+  },
+  {
+   "id": "d5",
+   "topic": "Data & Problem",
+   "q": "Why are the classes imbalanced and does it matter?",
+   "a": "The 10 classes are not equally common in the dataset; for example Pasture has roughly 2,000 patches while Forest has around 3,000, simply because some land-cover types are more widespread across the sampled scenes. This matters because plain accuracy can be misleading when classes are uneven: a lazy model that favours the big classes can still post a decent accuracy number while genuinely understanding little. That is exactly why this project reports Cohen's kappa (0.834) alongside our 85.1% accuracy, since kappa corrects for agreement that could happen by chance. Watching imbalance is a recurring theme of the project rather than a side note."
+  },
+  {
+   "id": "d6",
+   "topic": "Data & Problem",
+   "q": "Could the model handle a class it has never seen?",
+   "a": "No. Our model is closed-set, meaning it always picks exactly one of the 10 classes it was trained on. Its final layer produces 10 output scores, one per known class, and it simply chooses the highest, so there is no option to say 'none of these' or 'something new'. If you showed it an ocean, a desert, or a cloud, it would still force the image into one of the 10 land-cover labels. Handling genuinely unknown classes is a different problem called open-set recognition, which this project does not attempt."
+  },
+  {
+   "id": "m1",
+   "topic": "Model & CNN",
+   "q": "What exactly are the 18 layers in ResNet18?",
+   "a": "The 18 in ResNet18 counts the layers that have learnable weights: one first convolution that scans the raw image, then 16 more convolution layers arranged in 8 residual blocks, plus the final fully-connected classification layer. Pooling and activation steps are not counted because they have no weights to learn. The residual blocks are the trick that gives ResNet its name: each block adds a shortcut that lets information skip ahead, which makes deep networks trainable. In our project we keep all of these layers frozen and only retrain the very last one for our 10 classes."
+  },
+  {
+   "id": "m2",
+   "topic": "Model & CNN",
+   "q": "What is a feature map?",
+   "a": "A feature map is the output of a convolution layer: a grid showing where in the image a particular pattern was detected. When a filter slides across the image looking for, say, vertical edges, the resulting feature map lights up at the spots where vertical edges appear. Early layers produce feature maps for simple things like edges and colours, while deeper layers produce maps for textures, then shapes, then whole concepts like 'grid of streets'. So a feature map is basically the network's heat-map answer to 'where did I see this pattern?'"
+  },
+  {
+   "id": "m3",
+   "topic": "Model & CNN",
+   "q": "What does the 512-number vector before the head represent?",
+   "a": "After the frozen ResNet18 backbone has processed an image, it boils everything down to a single vector of 512 numbers, just before the final classification layer. Think of it as a compact summary, or fingerprint, of the image: each of the 512 numbers measures how strongly some learned high-level feature is present. Two patches that look alike will have similar 512-number vectors, even if their raw pixels differ a bit. Our trainable head is just a small linear layer that takes these 512 numbers and turns them into 10 class scores."
+  },
+  {
+   "id": "m4",
+   "topic": "Model & CNN",
+   "q": "What are parameters versus hyperparameters?",
+   "a": "Parameters are the internal weights the model learns automatically during training; ResNet18 has about 11.2 million of them in total, though we freeze almost all and let only 5,130 actually train in the new head. Hyperparameters are the settings we choose by hand before training starts, which control how that learning happens. Examples in this project are the batch size of 128, the learning rate of 1e-3, the choice of 3 epochs, and the random seed of 42. The simple rule: the model learns parameters, while the human picks hyperparameters."
+  },
+  {
+   "id": "m5",
+   "topic": "Model & CNN",
+   "q": "Why not use a bigger ResNet50 here?",
+   "a": "ResNet50 is deeper and has roughly four times the parameters of ResNet18, so it costs more memory and compute for each image. On this project's hardware, an Apple M1 running CPU-only, training is already a careful budget where one epoch takes about 140 seconds; a bigger network would slow every run without a guaranteed payoff. ResNet18 is a small, fast, and strong baseline that already reaches 85.1% accuracy and 0.834 kappa, which is plenty to demonstrate the method. Starting small also keeps the experiments quick to iterate, which matters more for a learning portfolio than squeezing out the last percent."
+  },
+  {
+   "id": "m6",
+   "topic": "Model & CNN",
+   "q": "What would happen with a plain dense network instead of a CNN?",
+   "a": "A plain dense (fully-connected) network would flatten the 3x64x64 image into one long list of numbers and connect every pixel to every neuron, which throws away the fact that nearby pixels belong together. That ignores how images actually work: a river pixel's meaning depends on its neighbours, not on a pixel in the far corner, which is precisely what convolutions respect. A dense net would also need far more parameters and would tend to overfit and generalise poorly on images. In practice it would learn slower and score worse than a CNN, which is why convolutional networks are the standard choice for image tasks."
+  },
+  {
+   "id": "t1",
+   "topic": "Training",
+   "q": "What is a gradient in plain words?",
+   "a": "A gradient is an arrow that tells each weight which way to move, and how much, to make the model a little less wrong. After the model guesses and the loss function measures how bad the guess was, the gradient points downhill toward lower loss for every adjustable weight. The optimizer then nudges the weights a small step in that downhill direction. Repeat this guess, measure, adjust loop thousands of times and the gradients steadily steer the weights toward good predictions."
+  },
+  {
+   "id": "t2",
+   "topic": "Training",
+   "q": "Why batch size 128 specifically?",
+   "a": "Batch size is how many images the model looks at before it updates its weights once. A larger batch gives a steadier, less noisy estimate of the gradient and uses the hardware more efficiently, but it needs more memory. We picked 128 because it is a comfortable middle ground that fits in memory on the M1 CPU while keeping each epoch around 140 seconds. It is a tuned default rather than a magic number; 64 or 256 would also be reasonable choices."
+  },
+  {
+   "id": "t3",
+   "topic": "Training",
+   "q": "What does loss going from 0.94 to 0.47 actually mean?",
+   "a": "Loss is a single number scoring how surprised the model is by the correct answers, where lower is better and we use cross-entropy loss for this multi-class task. A starting loss near 0.94 means the freshly attached head is fairly unsure and often wrong, while dropping to about 0.47 means its predictions have become much more confident and correct on the training data. Roughly halving the loss over training is the visible sign that learning is working. We still trust the held-out validation accuracy of 85.1% as the honest measure, since training loss alone can keep dropping even when real-world skill plateaus."
+  },
+  {
+   "id": "t4",
+   "topic": "Training",
+   "q": "Why only 3 epochs, and how would we know when to stop?",
+   "a": "An epoch is one full pass over the training data, and with a frozen backbone there are only 5,130 head parameters to fit, so they learn what they can very quickly. Three epochs were enough for the loss and validation accuracy to level off, and at about 140 seconds each on the M1 CPU, running many more would cost time for little gain. The way you know when to stop is to watch the validation accuracy: when it stops improving, or starts dropping while training loss keeps falling, further training is just overfitting. In short, we stopped because the unseen-data score had plateaued at around 85%."
+  },
+  {
+   "id": "t5",
+   "topic": "Training",
+   "q": "What is Adam versus plain SGD?",
+   "a": "Both Adam and SGD (stochastic gradient descent) are optimizers, the part that uses the gradients to update the weights each batch. Plain SGD takes a fixed-size step in the downhill direction for every weight, so you must tune the learning rate carefully. Adam is smarter: it keeps a running memory of past gradients and adapts the step size per weight, which usually makes training faster and less fussy to tune. This project uses Adam with a learning rate of 1e-3, a sane and common default that worked well out of the box."
+  },
+  {
+   "id": "t6",
+   "topic": "Training",
+   "q": "What does seed 42 do and why fix it?",
+   "a": "A random seed sets the starting point for all the 'random' choices a training run makes, such as how the data is shuffled and how the 80/20 train/validation split is drawn. By fixing the seed to 42, we make those choices identical on every run, so the same split and shuffle happen each time. That reproducibility means when a number changes between experiments, we know it came from a real change we made, not from random luck. In this project it is what lets us compare the random-split and spatial-split results fairly, since only the split logic differs while everything else stays pinned."
+  },
+  {
+   "id": "e1",
+   "topic": "Evaluation",
+   "q": "What is the difference between precision and recall, in this project's terms?",
+   "a": "Precision asks: of all the patches the model labeled River, how many were actually River? Recall asks: of all the patches that truly are River, how many did the model catch? In our project River is a confused class (81 Rivers got predicted as Highway), so low recall there means many real rivers slipped past as something else. You can be high on one and low on the other, which is why a single accuracy number hides what is really going wrong per class."
+  },
+  {
+   "id": "e2",
+   "topic": "Evaluation",
+   "q": "What is F1 and when would I prefer it over accuracy?",
+   "a": "F1 is the harmonic mean of precision and recall, so it only stays high when both are high; it collapses if either one is bad. Prefer it over accuracy when classes are imbalanced, like our EuroSAT where Pasture has about 2,000 patches and others have 3,000, because plain accuracy can look fine while a small class is being ignored. F1 is usually reported per class, then averaged, so you see which land-cover types the model actually handles well. For our River-versus-Highway confusion, per-class F1 would expose the weakness that 85% accuracy papers over."
+  },
+  {
+   "id": "e3",
+   "topic": "Evaluation",
+   "q": "How do I read our confusion matrix one row at a time?",
+   "a": "Each row is one true class and each column is what the model predicted, so the diagonal cell is correct calls and everything else in that row is a mistake. Read the River row: most cells are zero, the diagonal is high, but the Highway column shows 81, meaning 81 real Rivers were called Highway. Read the PermanentCrop row and you see 49 leaking into HerbaceousVegetation. Going row by row tells you not just how often the model is wrong but exactly which class it mistakes yours for."
+  },
+  {
+   "id": "e4",
+   "topic": "Evaluation",
+   "q": "Why is our Cohen's kappa of 0.834 called very good, and what is the scale?",
+   "a": "Kappa runs from 0 to 1, where 0 means the model is no better than random guessing and 1 means perfect agreement. It is stricter than accuracy because it subtracts out the agreement you would get by luck, which matters when classes are imbalanced. By the common Landis-Koch reading, 0.61 to 0.80 is substantial and 0.81 to 1.00 is almost perfect, so our 0.834 lands in the top band. It is the standard metric in remote sensing for exactly this reason, and reporting it alongside our 85.09% accuracy signals you know accuracy alone can flatter."
+  },
+  {
+   "id": "e5",
+   "topic": "Evaluation",
+   "q": "What is IoU and why does Phase C use it?",
+   "a": "IoU, intersection over union, measures overlap: the area both you and the truth agree on, divided by the total area either one claims. For a class it equals true positives over true positives plus false positives plus false negatives, so it punishes both kinds of error in one number. Phase C plans a per-class IoU and F1 table because it is the standard for comparing models like a fine-tuned CNN against a transformer fairly. It gives a per-class view that a single overall accuracy can never show."
+  },
+  {
+   "id": "e6",
+   "topic": "Evaluation",
+   "q": "If accuracy is 85%, what is the other 15%, and are all the errors equally bad?",
+   "a": "The other roughly 15% are patches the model labeled wrong, and our confusion matrix shows they are not spread evenly; they cluster in specific confusions like River into Highway (81 cases) and PermanentCrop into HerbaceousVegetation (49 cases). The errors are not equally bad in practice: confusing two similar crop types is mild, but confusing water with a road could matter a lot depending on who uses the map. That is precisely why we look at the confusion matrix and per-class metrics instead of stopping at one number. A good answer in an interview names the worst confusions and explains why their cost differs."
+  },
+  {
+   "id": "g1",
+   "topic": "Geospatial & Phase B",
+   "q": "What is a UTM zone in plain words?",
+   "a": "The Earth is round but maps are flat, so the world is sliced into 60 north-south strips called UTM zones, each its own flat grid where you can measure distance in plain meters. Inside a zone a location is given as an easting (meters east) and a northing (meters north) instead of latitude and longitude. EuroSAT's GeoTIFF tags store an EPSG code that names which UTM zone a patch belongs to, plus its easting and northing. We needed that so we could group patches that are physically near each other, which is the whole basis of our spatial split."
+  },
+  {
+   "id": "g2",
+   "topic": "Geospatial & Phase B",
+   "q": "What is inside a GeoTIFF that a plain jpg lacks?",
+   "a": "A jpg is just pixels with no idea where on Earth they sit, but a GeoTIFF carries metadata tags that pin the pixels to a map. The three that mattered for us were a tiepoint (the real map coordinate of a corner pixel), a pixel scale (10 meters per pixel for Sentinel-2), and an EPSG code naming the UTM zone. From those three tags our src/extract_coords.py computed a real-world location for all 27,000 patches. That is how we recovered coordinates the RGB jpegs had thrown away, without which Phase B would have been impossible."
+  },
+  {
+   "id": "g3",
+   "topic": "Geospatial & Phase B",
+   "q": "Why 50km blocks specifically, and what if we had chosen 5km or 500km?",
+   "a": "We grouped patches into 50km grid blocks so that the validation set sits in geographically separate places from training, which is what kills neighbor leakage. Too small, like 5km, and a single farm or river could still straddle the train and validation boundary, so leakage sneaks back in. Too large, like 500km, and you would have so few blocks that holding some out removes whole regions and climates the model never gets to learn, hurting the score for the wrong reason. 50km is a balance: big enough to separate neighbors, small enough to keep 866 blocks so a 20% holdout still leaves plenty to train on."
+  },
+  {
+   "id": "g4",
+   "topic": "Geospatial & Phase B",
+   "q": "Why did WE find no leakage when papers warn about it so loudly?",
+   "a": "Our measured result was a null: random 85.2% versus spatial 85.6%, a gap of about minus 0.4%, which is just run-to-run noise. The leading hypothesis is that our backbone is frozen, so only a 5,130-parameter linear head learns, and a head that small simply lacks the capacity to memorize specific places. Leakage bites hardest when the whole network can overfit and quietly recognize a farm it already saw. The papers that warn loudly usually train all the weights, which is exactly the high-capacity setting our Phase C will test by unfreezing the network."
+  },
+  {
+   "id": "g5",
+   "topic": "Geospatial & Phase B",
+   "q": "What would full GroupKFold add over our single holdout?",
+   "a": "We ran one spatial holdout per condition, a deliberate choice to fit a CPU budget, and we stated that honestly in the output JSON. Full GroupKFold would rotate through several folds so every block gets a turn in validation, then average the scores, which smooths out the luck of any single split. That matters because a minus 0.4% gap could partly be noise, and multiple folds would tell us how much the number wobbles run to run. It is the gold standard, so the honest interview line is: I ran one fold for cost reasons and GroupKFold is the next step to confirm the null is real."
+  },
+  {
+   "id": "g6",
+   "topic": "Geospatial & Phase B",
+   "q": "What is NDVI and why might Phase C care about it?",
+   "a": "NDVI, the normalized difference vegetation index, combines the near-infrared and red bands into one number that tells you how green and living a surface is, because healthy plants reflect strongly in near-infrared. Our Phase A and B used only RGB jpegs, which throw away the near-infrared band, so NDVI was not available to us yet. Phase C plans to move toward the full multispectral Sentinel-2 data, where NDVI becomes computable and could sharpen the crop and vegetation classes that confuse our current model. It is a concrete example of how extra spectral bands carry information no RGB photo can."
+  },
+  {
+   "id": "c1",
+   "topic": "Career & Interview",
+   "q": "How do I describe this project in one line on a resume?",
+   "a": "Try: Built a spatially-validated land-cover classifier on EuroSAT (27,000 Sentinel-2 patches, 10 classes) using transfer learning with a frozen ResNet18, reporting Cohen's kappa 0.834 and 85% accuracy. If you have room, add: recovered all patch coordinates from GeoTIFF metadata and ran a 50km-block spatial cross-validation that honestly measured leakage as a null result. The phrase spatially-validated and the kappa number are the parts that make a reviewer pause. Lead with the honesty angle, not just the accuracy, because that is what is rare."
+  },
+  {
+   "id": "c2",
+   "topic": "Career & Interview",
+   "q": "What is the hardest question I could get about this project, and the answer?",
+   "a": "The hardest is probably: your spatial cross-validation found no leakage gap, so wasn't the whole experiment pointless? The answer is no, the absence of an effect is a real result when the apparatus is sound: I built identical training where only the split differs, recovered all 27k coordinates from GeoTIFF tags, and held out whole 50km blocks. The reason for the null is that my frozen 5,130-parameter head lacks the capacity to memorize places, and leakage needs that capacity. That is exactly the hypothesis Phase C tests by unfreezing all 11 million parameters, so the null sets up the next experiment rather than ending the story."
+  },
+  {
+   "id": "c3",
+   "topic": "Career & Interview",
+   "q": "What makes this project different from every other EuroSAT tutorial online?",
+   "a": "Most tutorials stop at: load EuroSAT, fine-tune a CNN, report a flattering accuracy, done. This project adds three things they skip: a real spatial cross-validation apparatus that holds out whole 50km geographic blocks, an honest null finding reported as-is instead of cherry-picked numbers, and coordinates recovered straight from GeoTIFF metadata tags because the RGB jpegs had none. Building the controlled experiment and reporting whatever it produced is what makes it read as senior work. Anyone can hit a number; few can show they questioned whether the number was honest."
+  },
+  {
+   "id": "c4",
+   "topic": "Career & Interview",
+   "q": "What should I build next after this project?",
+   "a": "Inside this repo, finish Phase C (fine-tune the unfrozen ResNet, benchmark a transformer like ViT under the same spatial folds, and report per-class IoU/F1) and then Phase D (publish the repo and pass the mock-interview gate). The single most valuable next experiment is Phase C's central question: does unfreezing all 11 million parameters reopen the leakage gap the frozen head hid? Beyond this repo, this is Project 1 of 3 in the portfolio, so Projects 2 and 3 broaden you into different ML domains. Depth first here, then breadth across the portfolio."
+  },
+  {
+   "id": "c5",
+   "topic": "Career & Interview",
+   "q": "Is 85% good enough for a portfolio when benchmarks hit 98%+?",
+   "a": "Published EuroSAT benchmarks reach 98%+ because they fine-tune the entire network, often on the full multispectral bands, on GPUs; we deliberately froze the backbone and trained a tiny head on a laptop CPU in minutes. So 85% is exactly the right number for a baseline: it is honest, reproducible anywhere, and a known starting line. What beats it is Phase C, where unfreezing the network and adding spectral data should climb toward those benchmark numbers, and you can report the delta. In an interview, framing 85% as a deliberate baseline you can explain beats quoting 98% you merely copied."
+  },
+  {
+   "id": "c6",
+   "topic": "Career & Interview",
+   "q": "Which parts of the code should I be able to write from memory?",
+   "a": "Be able to sketch the train.py core: the transforms (ToTensor then Normalize with ImageNet stats), build_model() loading resnet18 with frozen weights and a replaced nn.Linear(512, 10) head, and the training loop's three steps of guess, measure loss with CrossEntropyLoss, then adjust with the Adam optimizer. You should also be able to explain the validation loop using model.eval() and no_grad(). For Phase B, know how spatial_cv.py groups patches into 50km blocks and holds out whole blocks so neighbors cannot leak. If you can whiteboard the path from a satellite patch to a predicted label, you own the project."
+  }
+ ]
+}

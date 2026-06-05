@@ -37,6 +37,7 @@
   <button class="mtab" data-panel="learn">📚 Learn</button>
   <button class="mtab" data-panel="phaseb">🧪 Phase B: The Honest Test</button>
   <button class="mtab" data-panel="quiz">🎯 Quiz</button>
+  <button class="mtab" data-panel="faq">❓ FAQ</button>
 </div>
 
 <!-- ════════════════ TAB: OVERVIEW ════════════════ -->
@@ -151,6 +152,15 @@
     <button id="retryBtn" style="background:#3a4a5c;color:var(--ink)">Reset</button>
   </div>
 </div><!-- /panel-quiz -->
+
+<!-- ════════════════ TAB: FAQ ════════════════ -->
+<div class="panel" id="panel-faq">
+  <h2 style="margin-top:10px">❓ Instant Answers <span class="dim" id="faqCount"></span></h2>
+  <p class="dim">Every question we anticipated, pre-answered — zero wait. Search below; click a question to expand. If yours isn't here, the 💬 tutor answers instantly for known concepts, ~90s when Claude draws fresh.</p>
+  <input id="faqSearch" placeholder="🔍 search… e.g. kappa, tensor, why frozen, UTM, resume" style="width:100%;background:#0f1419;border:1px solid #2a3542;border-radius:10px;color:var(--ink);padding:11px 14px;font-size:.95em;margin-bottom:10px">
+  <div id="faqList"><p class="dim">Loading…</p></div>
+  <p class="dim" id="faqNoMatch" style="display:none">No match — ask the 💬 tutor on the right; it knows 15 concepts instantly.</p>
+</div><!-- /panel-faq -->
 </div>
 
 <script>
@@ -395,6 +405,15 @@ document.getElementById('spatialBtn').addEventListener('click', () => {
   #phaseb img { max-width:100%; border-radius:10px; margin-top:10px; }
   .roadRow { display:flex; gap:10px; align-items:center; margin:8px 0; }
   .roadDot { width:14px; height:14px; border-radius:50%; flex-shrink:0; }
+  /* ---- faq ---- */
+  .faqTopic { color:var(--accent); margin:22px 0 6px; font-size:1.05em; font-weight:700; }
+  .faqItem { background:var(--card); border-radius:10px; margin:7px 0; overflow:hidden; }
+  .faqQ { padding:11px 16px; cursor:pointer; font-weight:600; font-size:.94em; display:flex; justify-content:space-between; gap:8px; }
+  .faqQ:hover { background:#212b36; }
+  .faqQ::after { content:'+'; color:var(--dim); font-weight:400; }
+  .faqItem.open .faqQ::after { content:'−'; }
+  .faqA { display:none; padding:0 16px 13px; font-size:.9em; color:#c6d2de; border-top:1px solid #2a3542; padding-top:10px; }
+  .faqItem.open .faqA { display:block; }
 </style>
 
 <div id="fileBanner"><b>💬 To activate the AI tutor:</b> open Terminal and run<br>
@@ -595,6 +614,37 @@ then visit <a href="http://localhost:8787/visual_guide.html" style="color:#ffcc8
   $('retryBtn').addEventListener('click', () => { graded = false;
     Object.keys(sel).forEach(k => delete sel[k]); render(); });
   loadQuiz();
+
+  // ---- FAQ: pre-answered questions, instant, searchable ----
+  let faqs = [];
+  async function loadFaq() {
+    try {
+      const r = await fetch('faq_bank.json'); faqs = (await r.json()).questions;
+    } catch (e) { $('faqList').innerHTML = '<p class="dim">FAQ needs the tutor server running.</p>'; return; }
+    $('faqCount').textContent = `— ${faqs.length} questions, 0ms each`;
+    renderFaq(faqs);
+  }
+  function renderFaq(list) {
+    $('faqList').innerHTML = '';
+    $('faqNoMatch').style.display = list.length ? 'none' : 'block';
+    let lastTopic = null;
+    list.forEach(f => {
+      if (f.topic !== lastTopic) { lastTopic = f.topic;
+        const t = document.createElement('div'); t.className = 'faqTopic'; t.textContent = f.topic;
+        $('faqList').appendChild(t); }
+      const item = document.createElement('div'); item.className = 'faqItem';
+      const q = document.createElement('div'); q.className = 'faqQ'; q.textContent = f.q;
+      q.addEventListener('click', () => item.classList.toggle('open'));
+      const a = document.createElement('div'); a.className = 'faqA'; a.textContent = f.a;
+      item.append(q, a); $('faqList').appendChild(item);
+    });
+  }
+  $('faqSearch').addEventListener('input', () => {
+    const needle = $('faqSearch').value.trim().toLowerCase();
+    if (!needle) { renderFaq(faqs); return; }
+    renderFaq(faqs.filter(f => (f.q + ' ' + f.a + ' ' + f.topic).toLowerCase().includes(needle)));
+  });
+  loadFaq();
 })();
 </script>
 </body>

@@ -23,7 +23,8 @@ KB = [
         "keywords": [
             "overfitting", "overfit", "overfitted", "memorize", "memorizing",
             "generalize", "generalization", "train vs val", "validation gap",
-            "diverge", "diverging",
+            "diverge", "diverging", "too good on training", "memorizes",
+            "memorize the training", "memorizing the training",
         ],
         "tab_title": "Overfitting",
         "answer": (
@@ -102,7 +103,7 @@ loss();
     {
         "keywords": [
             "learning rate", "step size", "lr", "too big", "too small",
-            "overshoot", "step", "optimizer step",
+            "overshoot", "step", "optimizer step", "stride length",
         ],
         "tab_title": "Learning Rate",
         "answer": (
@@ -173,6 +174,7 @@ frame();
         "keywords": [
             "softmax", "logits", "logit", "probabilities", "probability",
             "normalize scores", "class scores", "confidence", "turn into probabilities",
+            "confident", "how sure",
         ],
         "tab_title": "Softmax",
         "answer": (
@@ -243,6 +245,7 @@ frame();
         "keywords": [
             "epoch", "batch", "batches", "mini-batch", "minibatch",
             "epoch vs batch", "batch size", "iteration", "pass through data",
+            "pass over data", "full pass", "one pass",
         ],
         "tab_title": "Epoch vs Batch",
         "answer": (
@@ -313,6 +316,9 @@ frame();
         "keywords": [
             "gradient descent", "gradient", "descent", "downhill", "minimize loss",
             "slope", "backprop direction", "follow the gradient",
+            "backprop", "backpropagation", "back propagation",
+            "how does it learn", "how does the model learn", "weights update",
+            "update the weights", "weight update", "update weights",
         ],
         "tab_title": "Gradient Descent",
         "answer": (
@@ -387,7 +393,7 @@ frame();
         "keywords": [
             "normalize", "normalization", "normalisation", "mean zero", "mean 0",
             "standardize", "standardization", "scale pixels", "preprocess",
-            "subtract mean", "why normalize",
+            "subtract mean", "why normalize", "preprocessing", "scaling",
         ],
         "tab_title": "Why Normalize",
         "answer": (
@@ -464,6 +470,7 @@ frame();
         "keywords": [
             "kappa", "cohen", "cohen's kappa", "chance agreement", "chance",
             "kappa vs accuracy", "0.834", "agreement", "balanced metric",
+            "agree", "by chance", "random guessing",
         ],
         "tab_title": "Kappa vs Accuracy",
         "answer": (
@@ -635,7 +642,8 @@ frame();
         "keywords": [
             "spatial autocorrelation", "spatial leakage", "leakage", "nearby",
             "neighboring patches", "neighbouring patches", "same farm",
-            "adjacent", "tobler",
+            "adjacent", "tobler", "leak", "inflated", "inflate",
+            "why is accuracy inflated", "optimistic", "too high accuracy",
         ],
         "tab_title": "Spatial Autocorrelation",
         "answer": (
@@ -723,6 +731,7 @@ frame();
         "keywords": [
             "cross-validation", "cross validation", "k-fold", "kfold", "k fold",
             "folds", "fold", "validation strategy", "groupkfold",
+            "split strategy", "how to split",
         ],
         "tab_title": "K-Fold Cross-Validation",
         "answer": (
@@ -801,7 +810,7 @@ frame();
         "keywords": [
             "utm", "coordinates", "coordinate", "geotiff", "geo-tiff",
             "georeferenced", "georeference", "crs", "projection", "easting",
-            "northing", "epsg", "tiepoint",
+            "northing", "epsg", "tiepoint", "tif", "tiff", "metadata", "location",
         ],
         "tab_title": "GeoTIFF Coordinates",
         "answer": (
@@ -880,6 +889,402 @@ function frame(){
     }
   }
   if(t%cycle===cycle-1){idx=(idx+1)%spots.length;}
+  t++;requestAnimationFrame(frame);
+}
+frame();
+</script></body></html>''',
+    },
+
+    # ----------------------------------------------------------------- 12
+    {
+        "keywords": [
+            "confusion matrix", "confused", "misclassified", "errors",
+            "river highway", "mistakes", "misclassification", "off-diagonal",
+        ],
+        "tab_title": "Reading Confusion Matrices",
+        "answer": (
+            "A confusion matrix is a grid that lays bare exactly where the model gets "
+            "things right and where it gets confused. The rows are the true classes "
+            "and the columns are what the model predicted, so a cell tells you how "
+            "many images of a given true class were called a given predicted class. "
+            "The diagonal — where true equals predicted — is where you want all the "
+            "weight, because those are the correct calls. Everything off the diagonal "
+            "is a mistake, and the brightest off-diagonal cells reveal the model's "
+            "systematic confusions. In this EuroSAT project the worst off-diagonal "
+            "cell is River truth, Highway prediction, with 81 River images "
+            "misclassified as Highway — both are long, thin, dark ribbons from above. "
+            "The next-worst is PermanentCrop truth, HerbaceousVegetation prediction, "
+            "with 49 mix-ups, since green farmland and green wild vegetation look alike "
+            "from 64x64 satellite tiles. Reading those cells tells you precisely which "
+            "classes to gather more data for. The animation fills a small grid cell by "
+            "cell: the diagonal glows green while the River-to-Highway off-diagonal "
+            "cell pulses red with its 81 count."
+        ),
+        "visual_html": r'''<!doctype html><html><head><meta charset="utf-8"><style>
+html,body{margin:0;padding:0;background:#0f1419;color:#e8edf2;font-family:Segoe UI,Arial,sans-serif}
+canvas{display:block;margin:0 auto}
+.cap{text-align:center;font-size:12px;padding:6px;color:#9aa5b1}
+</style></head><body>
+<canvas id="c" width="520" height="300"></canvas>
+<div class="cap">Rows = truth, cols = predicted; green diagonal is correct, red cell is River->Highway (81)</div>
+<script>
+var cv=document.getElementById("c"),x=cv.getContext("2d");
+var W=520,H=300,t=0;
+var labels=["River","Highway","Crop","Veg"];
+var n=4, cell=52, ox=140, oy=70;
+// row = truth, col = predicted; diagonal high, one off-diagonal hot
+var counts=[[210,81,3,6],[12,240,4,9],[5,7,200,49],[4,8,40,205]];
+function frame(){
+  x.fillStyle="#0f1419";x.fillRect(0,0,W,H);
+  var total=n*n;
+  var filled=Math.floor((t%200)/200*(total+4)); // sweep fill then hold
+  if(filled>total)filled=total;
+  x.fillStyle="#9aa5b1";x.font="12px Arial";
+  x.fillText("predicted ->",ox+30,oy-26);
+  x.save();x.translate(ox-44,oy+2*cell);x.rotate(-Math.PI/2);
+  x.fillText("truth ->",-20,0);x.restore();
+  // column labels
+  x.font="10px Arial";x.fillStyle="#9aa5b1";
+  for(var c=0;c<n;c++){x.fillText(labels[c],ox+c*cell+6,oy-8);}
+  for(var r=0;r<n;r++){
+    x.fillStyle="#9aa5b1";x.font="10px Arial";
+    x.fillText(labels[r],ox-44,oy+r*cell+cell/2+4);
+    for(var cc=0;cc<n;cc++){
+      var idx=r*n+cc;
+      var on = idx<filled;
+      var bx=ox+cc*cell, by=oy+r*cell;
+      var diag=(r===cc);
+      if(!on){
+        x.fillStyle="#1b2330";
+      } else if(diag){
+        x.fillStyle="#66bb6a";
+      } else if(r===0 && cc===1){
+        var pulse=0.5+0.5*Math.sin(t*0.12);
+        x.fillStyle="rgba(255,107,107,"+(0.45+0.55*pulse)+")";
+      } else {
+        // intensity by count
+        var v=counts[r][cc];
+        var a=Math.min(0.7,v/120);
+        x.fillStyle="rgba(255,167,38,"+(0.12+a)+")";
+      }
+      x.fillRect(bx+1,by+1,cell-2,cell-2);
+      if(on){
+        x.fillStyle=(diag||(r===0&&cc===1))?"#0f1419":"#e8edf2";
+        x.font="bold 11px Arial";
+        x.fillText(counts[r][cc],bx+cell/2-10,by+cell/2+4);
+      }
+    }
+  }
+  // highlight the hot cell label
+  if(filled>=2){
+    var hb_x=ox+1*cell, hb_y=oy+0*cell;
+    var pw=2+2*Math.abs(Math.sin(t*0.12));
+    x.strokeStyle="#ff6b6b";x.lineWidth=pw;
+    x.strokeRect(hb_x,hb_y,cell,cell);
+    x.fillStyle="#ff6b6b";x.font="bold 12px Arial";
+    x.fillText("River->Highway: 81",ox+n*cell+10,oy+cell/2);
+  }
+  // legend
+  x.fillStyle="#66bb6a";x.fillRect(ox,oy+n*cell+16,12,12);
+  x.fillStyle="#e8edf2";x.font="11px Arial";x.fillText("correct (diagonal)",ox+16,oy+n*cell+26);
+  x.fillStyle="#ff6b6b";x.fillRect(ox+150,oy+n*cell+16,12,12);
+  x.fillStyle="#e8edf2";x.fillText("top confusion",ox+166,oy+n*cell+26);
+  t++;requestAnimationFrame(frame);
+}
+frame();
+</script></body></html>''',
+    },
+
+    # ----------------------------------------------------------------- 13
+    {
+        "keywords": [
+            "precision", "recall", "f1", "false positive", "false negative",
+            "true positive", "precision vs recall", "precision and recall",
+        ],
+        "tab_title": "Precision vs Recall",
+        "answer": (
+            "Precision and recall are two different ways of being right, and they pull "
+            "in opposite directions. Take the River class. Precision asks: of all the "
+            "images the model labeled River, what fraction were actually rivers? It "
+            "punishes false positives — calling a highway a river. Recall asks: of all "
+            "the images that truly were rivers, what fraction did the model catch? It "
+            "punishes false negatives — missing a real river. If the model is timid and "
+            "only flags the most obvious wide rivers, precision is high but recall is "
+            "low because it misses the narrow ones. If it is trigger-happy and calls "
+            "every dark ribbon a river, recall climbs but precision drops as highways "
+            "sneak in — and remember 81 real rivers were called highways in this "
+            "project, which is exactly a River recall problem. The F1 score is the "
+            "harmonic mean that balances the two into one number. The animation shows "
+            "true rivers as blue dots and everything else as gray; a movable 'predicted "
+            "river' circle grows and shrinks while precision and recall bars update "
+            "live, so you can watch the trade-off happen."
+        ),
+        "visual_html": r'''<!doctype html><html><head><meta charset="utf-8"><style>
+html,body{margin:0;padding:0;background:#0f1419;color:#e8edf2;font-family:Segoe UI,Arial,sans-serif}
+canvas{display:block;margin:0 auto}
+.cap{text-align:center;font-size:12px;padding:6px;color:#9aa5b1}
+</style></head><body>
+<canvas id="c" width="520" height="300"></canvas>
+<div class="cap">Blue = true rivers; the predicted-river circle grows/shrinks, trading precision for recall</div>
+<script>
+var cv=document.getElementById("c"),x=cv.getContext("2d");
+var W=520,H=300,t=0;
+// fixed scatter: some true rivers (blue) clustered, gray others spread
+var dots=[];
+var seed=777;
+function rng(){seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff;}
+var cxC=160, cyC=160; // cluster center for true rivers
+for(var i=0;i<26;i++){
+  // true rivers near center
+  var ang=rng()*6.28, rad=rng()*70;
+  dots.push({x:cxC+Math.cos(ang)*rad, y:cyC+Math.sin(ang)*rad, river:true});
+}
+for(var j=0;j<34;j++){
+  dots.push({x:60+rng()*230, y:70+rng()*180, river:false});
+}
+function frame(){
+  x.fillStyle="#0f1419";x.fillRect(0,0,W,H);
+  // moving predicted-river radius: oscillate 25..120
+  var rr=72+62*Math.sin(t*0.02);
+  // circle
+  x.strokeStyle="#ffa726";x.lineWidth=2;x.setLineDash([5,4]);
+  x.beginPath();x.arc(cxC,cyC,rr,0,7);x.stroke();x.setLineDash([]);
+  x.fillStyle="rgba(255,167,38,0.07)";x.beginPath();x.arc(cxC,cyC,rr,0,7);x.fill();
+  x.fillStyle="#ffa726";x.font="11px Arial";x.fillText("predicted river",cxC-36,cyC-rr-8);
+  var tp=0,fp=0,fn=0;
+  for(var k=0;k<dots.length;k++){
+    var d=dots[k];
+    var dx=d.x-cxC, dy=d.y-cyC;
+    var inside=(dx*dx+dy*dy)<=rr*rr;
+    if(d.river && inside)tp++;
+    if(!d.river && inside)fp++;
+    if(d.river && !inside)fn++;
+    x.beginPath();x.arc(d.x,d.y,5,0,7);
+    x.fillStyle=d.river?"#4fc3f7":"#5a6675";
+    x.fill();
+    if(inside){x.strokeStyle="#ffa726";x.lineWidth=1.5;x.stroke();}
+  }
+  var prec=(tp+fp)>0?tp/(tp+fp):0;
+  var rec=(tp+fn)>0?tp/(tp+fn):0;
+  // bars
+  var bx=330, bw=150, bh=22;
+  x.fillStyle="#9aa5b1";x.font="11px Arial";
+  x.fillText("Precision = TP/(TP+FP)",bx,70);
+  x.fillStyle="#2a3340";x.fillRect(bx,78,bw,bh);
+  x.fillStyle="#66bb6a";x.fillRect(bx,78,bw*prec,bh);
+  x.fillStyle="#e8edf2";x.font="bold 12px Arial";x.fillText((prec*100).toFixed(0)+"%",bx+bw+8,95);
+  x.fillStyle="#9aa5b1";x.font="11px Arial";
+  x.fillText("Recall = TP/(TP+FN)",bx,128);
+  x.fillStyle="#2a3340";x.fillRect(bx,136,bw,bh);
+  x.fillStyle="#4fc3f7";x.fillRect(bx,136,bw*rec,bh);
+  x.fillStyle="#e8edf2";x.font="bold 12px Arial";x.fillText((rec*100).toFixed(0)+"%",bx+bw+8,153);
+  var f1=(prec+rec)>0?2*prec*rec/(prec+rec):0;
+  x.fillStyle="#ffa726";x.font="bold 12px Arial";x.fillText("F1 = "+(f1*100).toFixed(0)+"%",bx,190);
+  // counts
+  x.fillStyle="#9aa5b1";x.font="11px Arial";
+  x.fillText("TP="+tp+"  FP="+fp+"  FN="+fn,bx,214);
+  // legend
+  x.fillStyle="#4fc3f7";x.beginPath();x.arc(bx+6,238,5,0,7);x.fill();
+  x.fillStyle="#e8edf2";x.fillText("true river",bx+16,242);
+  x.fillStyle="#5a6675";x.beginPath();x.arc(bx+6,262,5,0,7);x.fill();
+  x.fillStyle="#e8edf2";x.fillText("not a river",bx+16,266);
+  t++;requestAnimationFrame(frame);
+}
+frame();
+</script></body></html>''',
+    },
+
+    # ----------------------------------------------------------------- 14
+    {
+        "keywords": [
+            "tensor", "shape", "dimensions", "3x64x64", "array",
+            "tensors", "dimension", "n-dimensional",
+        ],
+        "tab_title": "What Is a Tensor",
+        "answer": (
+            "A tensor is just a container for numbers, and its rank is how many "
+            "directions you can index along. A scalar is a single number, rank 0. A "
+            "vector is a row of numbers, rank 1, like a list of 10 class scores. A "
+            "matrix is a grid, rank 2, with rows and columns. A tensor is the general "
+            "term for any of these and especially for stacks of higher rank. In this "
+            "EuroSAT project a single image is a rank-3 tensor of shape 3 by 64 by 64: "
+            "3 color channels (red, green, blue), each a 64 by 64 grid of pixels. When "
+            "we train, we do not feed images one at a time; we stack a whole batch "
+            "together into a rank-4 tensor of shape 128 by 3 by 64 by 64, meaning 128 "
+            "images, each with 3 channels of 64 by 64 pixels. The shape is the model's "
+            "native language — every layer transforms one tensor shape into another. "
+            "The animation builds it up: a single number stretches into a row, the row "
+            "stacks into a grid, the grid becomes a 3-layer colored cube (the image), "
+            "and finally many cubes line up into a batch, with a shape label at each "
+            "stage."
+        ),
+        "visual_html": r'''<!doctype html><html><head><meta charset="utf-8"><style>
+html,body{margin:0;padding:0;background:#0f1419;color:#e8edf2;font-family:Segoe UI,Arial,sans-serif}
+canvas{display:block;margin:0 auto}
+.cap{text-align:center;font-size:12px;padding:6px;color:#9aa5b1}
+</style></head><body>
+<canvas id="c" width="520" height="300"></canvas>
+<div class="cap">scalar -> vector -> matrix -> 3x64x64 image cube -> 128x3x64x64 batch</div>
+<script>
+var cv=document.getElementById("c"),x=cv.getContext("2d");
+var W=520,H=300,t=0;
+var stageNames=["scalar  ()","vector  (10,)","matrix  (64,64)","tensor  (3,64,64)","batch  (128,3,64,64)"];
+var stageDesc=["one number","a row of numbers","rows x columns","3 channels of 64x64","128 images stacked"];
+function frame(){
+  x.fillStyle="#0f1419";x.fillRect(0,0,W,H);
+  var perStage=110;
+  var stage=Math.floor((t%(perStage*5))/perStage);
+  var local=((t%(perStage*5))%perStage)/perStage; // 0..1 within stage
+  var cxp=260, cyp=150;
+  x.textAlign="center";
+  if(stage===0){
+    x.fillStyle="#4fc3f7";x.fillRect(cxp-22,cyp-22,44,44);
+    x.fillStyle="#0f1419";x.font="bold 16px Arial";x.fillText("7",cxp,cyp+6);
+  } else if(stage===1){
+    var nshow=Math.min(10,Math.floor(local*12)+1);
+    for(var i=0;i<nshow;i++){
+      x.fillStyle="#4fc3f7";x.fillRect(cxp-110+i*22,cyp-16,20,32);
+      x.fillStyle="#0f1419";x.font="bold 11px Arial";x.fillText(i,cxp-110+i*22+10,cyp+4);
+    }
+  } else if(stage===2){
+    var rows=Math.min(6,Math.floor(local*8)+1);
+    for(var r=0;r<rows;r++)for(var c=0;c<8;c++){
+      x.fillStyle=((r+c)%2)?"#4fc3f7":"#3a8fc0";
+      x.fillRect(cxp-88+c*22,cyp-66+r*22,20,20);
+    }
+    x.fillStyle="#9aa5b1";x.font="10px Arial";x.fillText("(64 x 64 shown small)",cxp,cyp+70);
+  } else if(stage===3){
+    // 3-layer colored cube
+    var cols=["rgba(229,84,84,0.9)","rgba(102,187,106,0.9)","rgba(79,195,247,0.9)"];
+    var labs=["R","G","B"];
+    var depth=Math.min(3,Math.floor(local*4)+1);
+    for(var d=depth-1;d>=0;d--){
+      var off=d*18;
+      x.fillStyle=cols[d];
+      x.fillRect(cxp-60+off,cyp-50-off,90,90);
+      x.strokeStyle="#0f1419";x.lineWidth=1.5;x.strokeRect(cxp-60+off,cyp-50-off,90,90);
+      x.fillStyle="#0f1419";x.font="bold 14px Arial";x.fillText(labs[d],cxp-44+off,cyp-30-off);
+    }
+    x.fillStyle="#9aa5b1";x.font="10px Arial";x.fillText("one image = 3 x 64 x 64",cxp,cyp+62);
+  } else {
+    // batch of cubes
+    var ncubes=Math.min(8,Math.floor(local*10)+1);
+    for(var b=0;b<ncubes;b++){
+      var bx=70+b*52;
+      var cols2=["#e55454","#66bb6a","#4fc3f7"];
+      for(var dd=2;dd>=0;dd--){
+        var o=dd*7;
+        x.fillStyle=cols2[dd];
+        x.fillRect(bx+o,cyp-30-o,38,38);
+        x.strokeStyle="#0f1419";x.lineWidth=1;x.strokeRect(bx+o,cyp-30-o,38,38);
+      }
+    }
+    x.fillStyle="#9aa5b1";x.font="10px Arial";x.fillText("... 128 images in a batch",cxp,cyp+70);
+  }
+  // stage label
+  x.fillStyle="#ffa726";x.font="bold 16px Courier";x.fillText(stageNames[stage],cxp,46);
+  x.fillStyle="#66bb6a";x.font="12px Arial";x.fillText(stageDesc[stage],cxp,72);
+  // progress dots
+  for(var s=0;s<5;s++){
+    x.fillStyle=(s===stage)?"#ffa726":"#3a4656";
+    x.beginPath();x.arc(cxp-40+s*20,280,5,0,7);x.fill();
+  }
+  x.textAlign="left";
+  t++;requestAnimationFrame(frame);
+}
+frame();
+</script></body></html>''',
+    },
+
+    # ----------------------------------------------------------------- 15
+    {
+        "keywords": [
+            "augmentation", "augment", "flip", "rotate", "more data",
+            "data augmentation", "augmenting", "augmented", "rotation",
+        ],
+        "tab_title": "Data Augmentation",
+        "answer": (
+            "Data augmentation stretches a limited dataset by creating new, "
+            "label-preserving variants of the images you already have. You flip, "
+            "rotate, shift, or recolor each picture slightly, and because the label "
+            "does not change, the model sees effectively more examples and learns to "
+            "be robust to those variations. Satellite imagery is an especially natural "
+            "fit because the view is straight down: a forest is still a forest whether "
+            "you flip it left-to-right or rotate it 90 degrees, since there is no "
+            "fixed 'up' the way there is in a photo of a person. That makes flips and "
+            "rotations free, safe ways to multiply the 27,000 EuroSAT patches. Honest "
+            "note: this project's baseline did NOT use augmentation — it relied on the "
+            "frozen ResNet18 backbone alone — so adding flips and rotations is one of "
+            "the clearest, easiest upgrades available to push past 85.1% accuracy. The "
+            "animation shows one satellite patch in the center spawning flipped and "
+            "rotated copies that orbit around it, each labeled with the transform that "
+            "made it."
+        ),
+        "visual_html": r'''<!doctype html><html><head><meta charset="utf-8"><style>
+html,body{margin:0;padding:0;background:#0f1419;color:#e8edf2;font-family:Segoe UI,Arial,sans-serif}
+canvas{display:block;margin:0 auto}
+.cap{text-align:center;font-size:12px;padding:6px;color:#9aa5b1}
+</style></head><body>
+<canvas id="c" width="520" height="300"></canvas>
+<div class="cap">One patch spawns label-preserving flips & rotations (not used in this baseline)</div>
+<script>
+var cv=document.getElementById("c"),x=cv.getContext("2d");
+var W=520,H=300,t=0;
+var cxp=260,cyp=150;
+var variants=[
+  {lab:"flip H",hflip:true,vflip:false,rot:0},
+  {lab:"flip V",hflip:false,vflip:true,rot:0},
+  {lab:"rot 90",hflip:false,vflip:false,rot:Math.PI/2},
+  {lab:"rot 180",hflip:false,vflip:false,rot:Math.PI},
+  {lab:"rot 270",hflip:false,vflip:false,rot:3*Math.PI/2},
+  {lab:"flip+rot",hflip:true,vflip:false,rot:Math.PI/2}
+];
+function drawPatch(cx,cy,size,v,alpha){
+  x.save();
+  x.globalAlpha=alpha;
+  x.translate(cx,cy);
+  if(v){
+    x.rotate(v.rot);
+    x.scale(v.hflip?-1:1, v.vflip?-1:1);
+  }
+  var s=size;
+  // a "satellite-ish" patch: green field with a diagonal blue river + brown corner
+  x.fillStyle="#3f7a3f";x.fillRect(-s/2,-s/2,s,s);
+  x.fillStyle="#4fc3f7";x.beginPath();
+  x.moveTo(-s/2,-s/4);x.lineTo(-s/4,-s/2);x.lineTo(s/2,s/4);x.lineTo(s/4,s/2);x.closePath();x.fill();
+  x.fillStyle="#a9763f";x.fillRect(s/2-s/3,-s/2,s/3,s/3);
+  x.strokeStyle="#0f1419";x.lineWidth=1.5;x.strokeRect(-s/2,-s/2,s,s);
+  x.restore();
+}
+function frame(){
+  x.fillStyle="#0f1419";x.fillRect(0,0,W,H);
+  var orbitR=100;
+  var ph=(t%600)/600; // slow reveal
+  var shown=Math.min(variants.length,Math.floor(t/55)%(variants.length+3));
+  // orbiting variants
+  for(var i=0;i<variants.length;i++){
+    var a=t*0.012 + i*(6.283/variants.length);
+    var ox=cxp+Math.cos(a)*orbitR;
+    var oy=cyp+Math.sin(a)*orbitR*0.62;
+    var appear=i<shown?1:0.12;
+    // connector line
+    x.strokeStyle="rgba(255,167,38,"+(0.15*appear)+")";x.lineWidth=1;
+    x.beginPath();x.moveTo(cxp,cyp);x.lineTo(ox,oy);x.stroke();
+    drawPatch(ox,oy,46,variants[i],appear);
+    if(i<shown){
+      x.fillStyle="#ffa726";x.font="10px Arial";x.textAlign="center";
+      x.fillText(variants[i].lab,ox,oy+38);x.textAlign="left";
+    }
+  }
+  // original in center
+  drawPatch(cxp,cyp,64,null,1);
+  x.fillStyle="#66bb6a";x.font="bold 11px Arial";x.textAlign="center";
+  x.fillText("original",cxp,cyp+50);x.textAlign="left";
+  // labels
+  x.fillStyle="#9aa5b1";x.font="11px Arial";
+  x.fillText("label stays 'Forest' through every transform",20,28);
+  x.fillStyle="#ffa726";x.font="11px Arial";
+  x.fillText("baseline: NOT used (easy upgrade)",20,290);
   t++;requestAnimationFrame(frame);
 }
 frame();
