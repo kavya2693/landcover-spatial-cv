@@ -29,16 +29,36 @@
 <body>
 <div class="wrap">
 
-<h1>🛰️ How Your Land-Cover Classifier Works — Visually</h1>
-<p class="dim">Interactive companion to <code>src/train.py</code>. Every number on this page comes from the model YOU just trained (3 epochs, MacBook CPU, ~7 minutes).</p>
+<h1>🛰️ Your Land-Cover Classifier — Learning Hub</h1>
+<p class="dim">Everything comes from models YOU trained. Ask the tutor (💬) anything, from any tab.</p>
 
+<div id="mainTabs">
+  <button class="mtab" data-panel="overview">🏠 Overview</button>
+  <button class="mtab" data-panel="learn">📚 Learn</button>
+  <button class="mtab" data-panel="phaseb">🧪 Phase B: The Honest Test</button>
+  <button class="mtab" data-panel="quiz">🎯 Quiz</button>
+</div>
+
+<!-- ════════════════ TAB: OVERVIEW ════════════════ -->
+<div class="panel" id="panel-overview">
 <div class="row">
   <div class="card metric"><div class="big" style="color:var(--good)">85.1%</div><div class="dim">validation accuracy</div></div>
   <div class="card metric"><div class="big" style="color:var(--accent)">0.834</div><div class="dim">Cohen's kappa</div></div>
   <div class="card metric"><div class="big">27,000</div><div class="dim">satellite patches</div></div>
   <div class="card metric"><div class="big">10</div><div class="dim">land-cover classes</div></div>
 </div>
+<div class="card">
+  <h2 style="margin-top:6px">Project roadmap</h2>
+  <div class="roadRow"><div class="roadDot" style="background:var(--good)"></div><b>Phase A — Baseline</b>&nbsp;<span class="dim">✅ done · frozen ResNet18, 85.1% / kappa 0.834</span></div>
+  <div class="roadRow"><div class="roadDot" style="background:var(--warn)"></div><b>Phase B — Spatial cross-validation</b>&nbsp;<span class="dim">🔄 results land in the Phase B tab automatically</span></div>
+  <div class="roadRow"><div class="roadDot" style="background:#3a4a5c"></div><b>Phase C — Fine-tune + transformer benchmark</b>&nbsp;<span class="dim">next</span></div>
+  <div class="roadRow"><div class="roadDot" style="background:#3a4a5c"></div><b>Phase D — Publish + mock-interview gate</b>&nbsp;<span class="dim">final</span></div>
+  <p class="dim">Suggested path: 📚 Learn (all 6 sections) → ask the tutor anything unclear → 🧪 Phase B → 🎯 Quiz until you score 12+/14.</p>
+</div>
+</div>
 
+<!-- ════════════════ TAB: LEARN ════════════════ -->
+<div class="panel" id="panel-learn">
 <!-- ============ 1. IMAGE = NUMBERS ============ -->
 <h2>1 — An image is just a grid of numbers</h2>
 <div class="card">
@@ -104,7 +124,33 @@
   <div class="takeaway"><b>The signature finding (Phase B):</b> re-validate with geographically separated folds, and report exactly how many points of accuracy were an illusion. This is what makes the project senior-level.</div>
 </div>
 
-<p class="dim" style="margin-top:40px">Next: <code>docs/LEARNING.md</code> for depth · <code>docs/INTERVIEW_QA.md</code> to practice · Phase B = spatial cross-validation</p>
+<p class="dim" style="margin-top:40px">Deeper: <code>docs/LEARNING.md</code> · practice: <code>docs/INTERVIEW_QA.md</code> · then the 🧪 Phase B and 🎯 Quiz tabs</p>
+</div><!-- /panel-learn -->
+
+<!-- ════════════════ TAB: PHASE B ════════════════ -->
+<div class="panel" id="panel-phaseb">
+<div id="phaseb">
+  <h2 style="margin-top:10px">🧪 Was our 85.1% honest? The spatial test</h2>
+  <div class="card">
+    <p><b>The experiment:</b> train the exact same model twice. Once validated on a <b>random</b> 20% (patches scattered between training patches — neighbours leak). Once validated on whole <b>50&nbsp;km geographic blocks</b> the model never saw any part of. Same epochs, same code — only the split changes. Every patch's location was recovered from the multispectral GeoTIFF metadata (tiepoint + pixel scale + UTM zone).</p>
+    <div class="row" id="gapCards"><p class="dim">⏳ Experiment running on your CPU… this tab updates automatically when <code>outputs/spatial_gap.json</code> appears. Refresh in a few minutes.</p></div>
+    <div id="gapStory"></div>
+    <img id="blocksImg" alt="" style="display:none">
+  </div>
+  <div class="takeaway"><b>Why this matters in interviews:</b> anyone can report high accuracy. Reporting <i>how much of it was a leakage illusion</i> — with the experiment to prove it — is what separates "I trained a model" from "I evaluate models honestly."</div>
+</div>
+</div><!-- /panel-phaseb -->
+
+<!-- ════════════════ TAB: QUIZ ════════════════ -->
+<div class="panel" id="panel-quiz">
+  <h2 style="margin-top:10px">🎯 Interview Quiz <span id="quizScore" class="dim"></span></h2>
+  <p class="dim">14 questions anchored to YOUR project. Pick answers, then hit Grade. Best score is remembered — the Phase B brief gate is 12+/14.</p>
+  <div id="quizList"><p class="dim">Loading questions…</p></div>
+  <div class="row" style="justify-content:flex-start">
+    <button id="gradeBtn">Grade my answers</button>
+    <button id="retryBtn" style="background:#3a4a5c;color:var(--ink)">Reset</button>
+  </div>
+</div><!-- /panel-quiz -->
 </div>
 
 <script>
@@ -325,6 +371,30 @@ document.getElementById('spatialBtn').addEventListener('click', () => {
     overflow-y:auto; padding:22px 26px; }
   #tabCard iframe { width:100%; height:360px; border:none; border-radius:10px; background:#0f1419; }
   #fileBanner { background:#5d4037; color:#ffe0b2; border-radius:10px; padding:12px 16px; margin:14px 0; display:none; }
+  /* ---- main tabs ---- */
+  #mainTabs { display:flex; gap:8px; margin:18px 0 6px; border-bottom:2px solid #2a3542; flex-wrap:wrap; }
+  .mtab { background:none; color:var(--dim); border:none; border-bottom:3px solid transparent;
+    padding:10px 18px; font-size:1.02em; font-weight:600; cursor:pointer; border-radius:8px 8px 0 0; }
+  .mtab:hover { color:var(--ink); background:#1a2129; }
+  .mtab.active { color:var(--accent); border-bottom-color:var(--accent); }
+  .panel { display:none; } .panel.active { display:block; }
+  /* ---- quiz ---- */
+  .qcard { background:var(--card); border-radius:12px; padding:16px 20px; margin:12px 0; }
+  .qopt { display:block; background:#243140; border:1px solid #3a4a5c; border-radius:9px;
+    padding:9px 14px; margin:7px 0; cursor:pointer; font-size:.93em; }
+  .qopt:hover { background:#2e4156; }
+  .qopt.sel { border-color:var(--accent); background:#1c3a52; }
+  .qopt.correct { border-color:var(--good); background:#1d3a24; }
+  .qopt.wrong { border-color:var(--bad); background:#3a1d1d; }
+  .qexp { display:none; border-left:3px solid var(--warn); padding-left:12px; margin-top:10px; font-size:.88em; color:var(--dim); }
+  .qcard.graded .qexp { display:block; }
+  .qtopic { font-size:.72em; color:var(--dim); text-transform:uppercase; letter-spacing:.08em; }
+  #quizScore { font-size:1.3em; font-weight:700; }
+  /* ---- phase b ---- */
+  .gapNum { font-size:2.4em; font-weight:700; }
+  #phaseb img { max-width:100%; border-radius:10px; margin-top:10px; }
+  .roadRow { display:flex; gap:10px; align-items:center; margin:8px 0; }
+  .roadDot { width:14px; height:14px; border-radius:50%; flex-shrink:0; }
 </style>
 
 <div id="fileBanner"><b>💬 To activate the AI tutor:</b> open Terminal and run<br>
@@ -433,6 +503,97 @@ then visit <a href="http://localhost:8787/visual_guide.html" style="color:#ffcc8
 
   // open by default when served (tutor available), closed on file://
   if (!isFile) document.body.classList.add('tutor-open');
+})();
+
+// ==================== MAIN TABS + QUIZ + PHASE B ====================
+(function () {
+  const $ = id => document.getElementById(id);
+
+  // ---- tab switching, persisted ----
+  const tabs = document.querySelectorAll('.mtab');
+  function show(name) {
+    tabs.forEach(b => b.classList.toggle('active', b.dataset.panel === name));
+    document.querySelectorAll('.panel').forEach(p =>
+      p.classList.toggle('active', p.id === 'panel-' + name));
+    localStorage.setItem('activeTab', name);
+  }
+  tabs.forEach(b => b.addEventListener('click', () => show(b.dataset.panel)));
+  show(localStorage.getItem('activeTab') || 'overview');
+
+  // ---- Phase B: self-updating results ----
+  async function loadGap() {
+    try {
+      const r = await fetch('/spatial_gap.json');
+      if (!r.ok) return;
+      const g = await r.json();
+      const pct = v => (v * 100).toFixed(1) + '%';
+      $('gapCards').innerHTML =
+        `<div class="card metric"><div class="gapNum" style="color:var(--good)">${pct(g.random.accuracy)}</div><div class="dim">random split (flattering)</div></div>
+         <div class="card metric"><div class="gapNum" style="color:var(--warn)">${pct(g.spatial.accuracy)}</div><div class="dim">spatial split (honest)</div></div>
+         <div class="card metric"><div class="gapNum" style="color:var(--bad)">−${pct(g.gap_accuracy)}</div><div class="dim">the honest gap</div></div>`;
+      $('gapStory').innerHTML =
+        `<p><b>The finding:</b> validated on geography it had truly never seen, the model scores <b>${pct(g.spatial.accuracy)}</b> — ` +
+        `<b>${pct(g.gap_accuracy)} of the random-split score was a leakage illusion</b> (kappa: ${g.random.kappa} → ${g.spatial.kappa}). ` +
+        `${g.block_km}km blocks, ${g.epochs} epochs per condition, identical training. ` +
+        `Below: the actual map of held-out blocks (orange) per UTM zone.</p>`;
+      $('blocksImg').src = '/spatial_blocks.png'; $('blocksImg').style.display = 'block';
+    } catch (e) { /* file:// or server down — placeholder stays */ }
+  }
+  loadGap();
+
+  // ---- Quiz ----
+  let bank = null, graded = false;
+  const sel = {};                                  // qid -> chosen index
+  const total = () => bank ? bank.length : 14;
+  const passMark = () => Math.ceil(total() * 0.85);   // brief's quiz gate
+  const best = () => +localStorage.getItem('quizBest') || 0;
+  const showScore = s => $('quizScore').textContent =
+    (s !== undefined ? `— this round: ${s}/${total()} · ` : '— ') + `best: ${best()}/${total()}`;
+
+  async function loadQuiz() {
+    try {
+      const r = await fetch('quiz_bank.json'); bank = (await r.json()).questions;
+    } catch (e) { $('quizList').innerHTML = '<p class="dim">Quiz needs the tutor server running.</p>'; return; }
+    render();
+  }
+  function render() {                              // pure UI (re)build from cached bank
+    $('quizList').innerHTML = '';
+    bank.forEach((q, qi) => {
+      const card = document.createElement('div'); card.className = 'qcard'; card.id = 'qc' + qi;
+      card.innerHTML = `<div class="qtopic">${q.topic} · ${q.difficulty}</div><p><b>Q${qi + 1}.</b> ${q.question}</p>`;
+      q.options.forEach((opt, oi) => {
+        const o = document.createElement('span'); o.className = 'qopt'; o.textContent = opt;
+        o.addEventListener('click', () => { if (graded) return;
+          sel[qi] = oi;
+          card.querySelectorAll('.qopt').forEach((x, i) => x.classList.toggle('sel', i === oi)); });
+        card.appendChild(o);
+      });
+      const ex = document.createElement('div'); ex.className = 'qexp';
+      ex.innerHTML = q.explanation + (q.interview_tip ? `<br><b>💡 ${q.interview_tip}</b>` : '');
+      card.appendChild(ex);
+      $('quizList').appendChild(card);
+    });
+    showScore();
+  }
+
+  $('gradeBtn').addEventListener('click', () => {
+    if (!bank || graded) return;
+    graded = true; let score = 0;
+    bank.forEach((q, qi) => {
+      const card = $('qc' + qi); card.classList.add('graded');
+      card.querySelectorAll('.qopt').forEach((o, oi) => {
+        if (oi === q.answer) o.classList.add('correct');
+        else if (sel[qi] === oi) o.classList.add('wrong');
+      });
+      if (sel[qi] === q.answer) score++;
+    });
+    if (score > best()) localStorage.setItem('quizBest', score);
+    showScore(score);
+    $('quizScore').style.color = score >= passMark() ? 'var(--good)' : 'var(--warn)';
+  });
+  $('retryBtn').addEventListener('click', () => { graded = false;
+    Object.keys(sel).forEach(k => delete sel[k]); render(); });
+  loadQuiz();
 })();
 </script>
 </body>

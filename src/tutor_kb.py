@@ -629,6 +629,262 @@ function frame(){
 frame();
 </script></body></html>''',
     },
+
+    # ----------------------------------------------------------------- 9
+    {
+        "keywords": [
+            "spatial autocorrelation", "spatial leakage", "leakage", "nearby",
+            "neighboring patches", "neighbouring patches", "same farm",
+            "adjacent", "tobler",
+        ],
+        "tab_title": "Spatial Autocorrelation",
+        "answer": (
+            "Spatial autocorrelation is Tobler's first law of geography: near things "
+            "are more alike than distant things. Two satellite patches cut from the "
+            "same farm look almost identical — same crop, same soil, same shadows. If "
+            "one of those twin patches lands in the training set and the other lands "
+            "in validation, the model can simply recognize the place instead of "
+            "learning the underlying land-cover concept. That is spatial leakage, and "
+            "it quietly inflates your scores. A random 80/20 split scatters patches "
+            "everywhere, so adjacent twins routinely straddle the train and val sets, "
+            "which is exactly why this project's 85.1% random-split accuracy and 0.834 "
+            "kappa may be optimistic. The honest fix is a spatially-separated split "
+            "that keeps a whole contiguous region out for validation, so no patch in "
+            "val has a near-twin in train. The animation shows a map of patches: in "
+            "random mode adjacent blue and orange twins flash 'LEAK!', then it toggles "
+            "to a clean contiguous orange region with no twins — the honest split."
+        ),
+        "visual_html": r'''<!doctype html><html><head><meta charset="utf-8"><style>
+html,body{margin:0;padding:0;background:#0f1419;color:#e8edf2;font-family:Segoe UI,Arial,sans-serif}
+canvas{display:block;margin:0 auto}
+.cap{text-align:center;font-size:12px;padding:6px;color:#9aa5b1}
+</style></head><body>
+<canvas id="c" width="520" height="300"></canvas>
+<div class="cap">Random split leaks adjacent twins across train/val; spatial split keeps val honest</div>
+<script>
+var cv=document.getElementById("c"),x=cv.getContext("2d");
+var W=520,H=300,t=0;
+var cols=12,rows=8,cell=30,pad=3,ox=70,oy=46;
+var rnd=[];
+var seed=12345;
+function rng(){seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff;}
+for(var i=0;i<cols*rows;i++){rnd.push(rng()<0.2?1:0);}
+// pick an adjacent twin pair for the leak highlight (random mode)
+var leakA=3*cols+4, leakB=3*cols+5;
+rnd[leakA]=0; rnd[leakB]=1;
+function frame(){
+  x.fillStyle="#0f1419";x.fillRect(0,0,W,H);
+  var spatial=(Math.floor(t/240)%2)===1;
+  x.font="14px Arial";
+  x.fillStyle=spatial?"#66bb6a":"#ffa726";
+  x.fillText(spatial?"SPATIAL SPLIT (honest)":"RANDOM SPLIT (leaks)",ox,30);
+  for(var r=0;r<rows;r++){
+    for(var c=0;c<cols;c++){
+      var idx=r*cols+c;
+      var cx=ox+c*(cell+pad), cy=oy+r*(cell+pad);
+      var isVal;
+      if(spatial){ isVal = c>=cols-4; }
+      else { isVal = rnd[idx]===1; }
+      x.fillStyle=isVal?"#ffa726":"#4fc3f7";
+      x.fillRect(cx,cy,cell,cell);
+      x.fillStyle="rgba(15,20,25,0.30)";
+      x.fillRect(cx+4,cy+4,cell-8,(cell-8)/2);
+    }
+  }
+  if(!spatial){
+    var ar=Math.floor(leakA/cols),ac=leakA%cols;
+    var br=Math.floor(leakB/cols),bc=leakB%cols;
+    var axp=ox+ac*(cell+pad),ayp=oy+ar*(cell+pad);
+    var bxp=ox+bc*(cell+pad),byp=oy+br*(cell+pad);
+    var pulse=2+2*Math.sin(t*0.18);
+    x.strokeStyle="#ff6b6b";x.lineWidth=pulse;
+    x.strokeRect(axp-2,ayp-2,cell+4,cell+4);
+    x.strokeRect(bxp-2,byp-2,cell+4,cell+4);
+    x.fillStyle="#ff6b6b";x.font="bold 13px Arial";
+    x.fillText("LEAK!",bxp+cell+8,byp+cell/2+4);
+    x.fillStyle="#9aa5b1";x.font="11px Arial";
+    x.fillText("same farm: one in train, twin in val",ox,oy+rows*(cell+pad)+18);
+  } else {
+    x.fillStyle="#9aa5b1";x.font="11px Arial";
+    x.fillText("val is one contiguous region: no adjacent twins in train",ox,oy+rows*(cell+pad)+18);
+  }
+  x.fillStyle="#4fc3f7";x.fillRect(ox,oy+rows*(cell+pad)+28,12,12);
+  x.fillStyle="#e8edf2";x.font="11px Arial";x.fillText("train",ox+16,oy+rows*(cell+pad)+38);
+  x.fillStyle="#ffa726";x.fillRect(ox+80,oy+rows*(cell+pad)+28,12,12);
+  x.fillStyle="#e8edf2";x.fillText("val",ox+96,oy+rows*(cell+pad)+38);
+  t++;requestAnimationFrame(frame);
+}
+frame();
+</script></body></html>''',
+    },
+
+    # ----------------------------------------------------------------- 10
+    {
+        "keywords": [
+            "cross-validation", "cross validation", "k-fold", "kfold", "k fold",
+            "folds", "fold", "validation strategy", "groupkfold",
+        ],
+        "tab_title": "K-Fold Cross-Validation",
+        "answer": (
+            "Instead of trusting a single 80/20 split, k-fold cross-validation slices "
+            "the data into k equal folds and rotates through them: each fold takes a "
+            "turn as validation while the other k-1 folds train, so every image is "
+            "validated exactly once. You then report the mean accuracy plus or minus "
+            "the standard deviation across folds, which is far more trustworthy than "
+            "one lucky or unlucky split. For geospatial data the folds must be spatial "
+            "blocks rather than random shuffles — that is what GroupKFold gives you, "
+            "grouping nearby patches together so twins never split across a boundary "
+            "and the score stays honest. This EuroSAT project uses a single spatial "
+            "holdout rather than full spatial k-fold, purely for CPU-budget reasons, "
+            "since each fold means retraining the model. The animation shows a bar of "
+            "five segments where the orange validation block rotates through every "
+            "position, fold by fold, then reports a mean accuracy at the end."
+        ),
+        "visual_html": r'''<!doctype html><html><head><meta charset="utf-8"><style>
+html,body{margin:0;padding:0;background:#0f1419;color:#e8edf2;font-family:Segoe UI,Arial,sans-serif}
+canvas{display:block;margin:0 auto}
+.cap{text-align:center;font-size:12px;padding:6px;color:#9aa5b1}
+</style></head><body>
+<canvas id="c" width="520" height="300"></canvas>
+<div class="cap">Validation fold rotates through all 5 positions; mean +/- std is the honest score</div>
+<script>
+var cv=document.getElementById("c"),x=cv.getContext("2d");
+var W=520,H=300,t=0;
+var K=5;
+var accs=[0.847,0.861,0.839,0.855,0.852];
+var holdFrames=48;
+function frame(){
+  x.fillStyle="#0f1419";x.fillRect(0,0,W,H);
+  var cycle=K*holdFrames+holdFrames; // last slot = summary
+  var ph=t%cycle;
+  var foldIdx=Math.floor(ph/holdFrames);
+  var summary=foldIdx>=K;
+  var valFold=summary?-1:foldIdx;
+  var bw=88,gap=8,x0=40,by=110,bh=70;
+  x.fillStyle="#e8edf2";x.font="14px Arial";
+  x.fillText(summary?"all folds done":("fold "+(foldIdx+1)+" / "+K),x0,60);
+  for(var i=0;i<K;i++){
+    var bx=x0+i*(bw+gap);
+    var isVal=(i===valFold);
+    x.fillStyle=isVal?"#ffa726":"#4fc3f7";
+    x.fillRect(bx,by,bw,bh);
+    x.fillStyle=isVal?"#0f1419":"#e8edf2";x.font="bold 12px Arial";
+    x.fillText(isVal?"VAL":"train",bx+bw/2-16,by+bh/2+4);
+    x.fillStyle="#9aa5b1";x.font="11px Arial";
+    x.fillText("fold "+(i+1),bx+bw/2-18,by+bh+16);
+    if(!summary && i===valFold){
+      x.fillStyle="#ffa726";x.font="11px Arial";
+      x.fillText((accs[i]*100).toFixed(1)+"%",bx+bw/2-16,by-8);
+    }
+  }
+  if(summary){
+    var mean=0;for(var j=0;j<K;j++)mean+=accs[j];mean/=K;
+    var v=0;for(var k=0;k<K;k++)v+=(accs[k]-mean)*(accs[k]-mean);
+    var sd=Math.sqrt(v/K);
+    x.fillStyle="#66bb6a";x.font="bold 18px Arial";
+    x.fillText("mean = "+(mean*100).toFixed(1)+"%  +/- "+(sd*100).toFixed(1)+"%",x0+30,by+bh+70);
+    x.fillStyle="#9aa5b1";x.font="11px Arial";
+    x.fillText("more trustworthy than one single split",x0+60,by+bh+90);
+  } else {
+    x.fillStyle="#9aa5b1";x.font="11px Arial";
+    x.fillText("each fold takes one turn as validation",x0,by+bh+70);
+    x.fillText("for geodata use spatial blocks (GroupKFold)",x0,by+bh+90);
+  }
+  t++;requestAnimationFrame(frame);
+}
+frame();
+</script></body></html>''',
+    },
+
+    # ----------------------------------------------------------------- 11
+    {
+        "keywords": [
+            "utm", "coordinates", "coordinate", "geotiff", "geo-tiff",
+            "georeferenced", "georeference", "crs", "projection", "easting",
+            "northing", "epsg", "tiepoint",
+        ],
+        "tab_title": "GeoTIFF Coordinates",
+        "answer": (
+            "A GeoTIFF is an ordinary image file that also embeds where each pixel "
+            "sits on Earth, stored in metadata tags. Three tags do the heavy lifting: "
+            "a tiepoint, which pins one corner of the image to a real-world "
+            "coordinate; a pixel scale, which says how many meters each pixel covers; "
+            "and a CRS or EPSG code, which names the map projection used, such as UTM "
+            "zone 32N. Together they let software convert any pixel's row and column "
+            "into an easting and northing on the ground. This project reads those tags "
+            "from every one of the 27,000 EuroSAT patches to place each one at its true "
+            "location on a map, and that map is what makes spatially-separated folds "
+            "possible — you can only hold out a contiguous region if you know where "
+            "each patch actually is. The animation shows a satellite patch with its "
+            "tiepoint, scale, and EPSG tags floating out, then an arrow dropping the "
+            "patch onto a map of Europe at its coordinates, repeating for new patches."
+        ),
+        "visual_html": r'''<!doctype html><html><head><meta charset="utf-8"><style>
+html,body{margin:0;padding:0;background:#0f1419;color:#e8edf2;font-family:Segoe UI,Arial,sans-serif}
+canvas{display:block;margin:0 auto}
+.cap{text-align:center;font-size:12px;padding:6px;color:#9aa5b1}
+</style></head><body>
+<canvas id="c" width="520" height="300"></canvas>
+<div class="cap">GeoTIFF tags (tiepoint, scale, EPSG) place each patch at its real coordinates</div>
+<script>
+var cv=document.getElementById("c"),x=cv.getContext("2d");
+var W=520,H=300,t=0;
+var spots=[[360,90],[400,140],[330,170],[420,95],[355,200]];
+var idx=0;
+function frame(){
+  x.fillStyle="#0f1419";x.fillRect(0,0,W,H);
+  // simple Europe-ish outline on the right
+  x.strokeStyle="#2a3340";x.lineWidth=2;x.beginPath();
+  x.moveTo(300,70);x.lineTo(360,55);x.lineTo(420,70);x.lineTo(455,110);
+  x.lineTo(440,160);x.lineTo(400,210);x.lineTo(350,225);x.lineTo(315,190);
+  x.lineTo(300,140);x.closePath();x.stroke();
+  x.fillStyle="rgba(79,195,247,0.06)";x.fill();
+  x.fillStyle="#9aa5b1";x.font="11px Arial";x.fillText("map (UTM)",315,250);
+  // already-placed patches
+  for(var i=0;i<idx;i++){
+    x.fillStyle="#66bb6a";x.fillRect(spots[i][0]-4,spots[i][1]-4,8,8);
+  }
+  var cycle=180;
+  var ph=(t%cycle)/cycle;
+  var sp=spots[idx];
+  // source patch on the left
+  var sx=70,sy=110,ps=64;
+  x.fillStyle="#3a4656";x.fillRect(sx,sy,ps,ps);
+  for(var g=0;g<4;g++){
+    x.fillStyle=g%2?"#4a5a6e":"#2f3b49";
+    x.fillRect(sx+ (g%2)*ps/2, sy+ Math.floor(g/2)*ps/2, ps/2, ps/2);
+  }
+  x.fillStyle="#9aa5b1";x.font="11px Arial";x.fillText("satellite patch",sx-2,sy-8);
+  // floating tags
+  var tags=["tiepoint: 411000E, 5650000N","scale: 10 m/px","EPSG: 32632 (UTM 32N)"];
+  for(var k=0;k<tags.length;k++){
+    var appear=Math.min(1,Math.max(0,(ph-0.05-k*0.1)/0.15));
+    if(appear<=0)continue;
+    var ty=sy+ps+24+k*22;
+    var tx=sx + appear*30;
+    x.globalAlpha=appear;
+    x.fillStyle="#ffa726";x.font="11px Courier";
+    x.fillText(tags[k],tx,ty);
+    x.globalAlpha=1;
+  }
+  // arrow placing patch onto map after tags shown
+  if(ph>0.45){
+    var fly=Math.min(1,(ph-0.45)/0.4);
+    var fx=sx+ps/2 + (sp[0]-(sx+ps/2))*fly;
+    var fy=sy+ps/2 + (sp[1]-(sy+ps/2))*fly;
+    x.fillStyle="#4fc3f7";x.fillRect(fx-5,fy-5,10,10);
+    x.strokeStyle="rgba(255,167,38,0.5)";x.lineWidth=1.5;x.setLineDash([4,4]);
+    x.beginPath();x.moveTo(sx+ps/2,sy+ps/2);x.lineTo(fx,fy);x.stroke();x.setLineDash([]);
+    if(fly>=1){
+      x.fillStyle="#66bb6a";x.font="11px Arial";x.fillText("placed",sp[0]+8,sp[1]+4);
+    }
+  }
+  if(t%cycle===cycle-1){idx=(idx+1)%spots.length;}
+  t++;requestAnimationFrame(frame);
+}
+frame();
+</script></body></html>''',
+    },
 ]
 
 

@@ -1,0 +1,5 @@
+Device: cpu
+Random split:
+  [random] epoch 1/3 (120s)
+  [random] epoch 2/3 (113s)
+  [random] epoch 3/3 (115s)

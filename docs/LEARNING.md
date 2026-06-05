@@ -67,7 +67,24 @@ Then go to `docs/INTERVIEW_QA.md` and practice the full question bank.
 
 ---
 
+## Layer 5 — Phase B: Spatial Cross-Validation (the signature finding)
+
+**The suspicion.** Tobler's first law of geography: *near things are more alike than far things*. EuroSAT cut big satellite scenes into 64×64 patches — so many patches are next-door neighbours of the same farm, forest, or town. A **random** split scatters those neighbours across train AND validation. The model can then score well by *recognizing the place* (nearly identical pixels it trained on) rather than *understanding the land-cover concept*. The 85.1% might be partly an illusion.
+
+**Recovering locations.** Our RGB jpegs carry no location — but EuroSAT's multispectral GeoTIFFs are *georeferenced*: TIFF metadata tags store a **tiepoint** (the map coordinate of the corner pixel), a **pixel scale** (10m for Sentinel-2), and an **EPSG code** naming the UTM zone. `src/extract_coords.py` reads those three tags for all 27,000 patches straight out of the zip (we never even extracted it — and deleted the 2GB after saving a 1MB `coords.csv`). Industry would use `rasterio`; it has no Python 3.14 wheel yet, so we parsed the tags directly with `tifffile` — worth mentioning in an interview, it shows you know what's *inside* a GeoTIFF.
+
+**The experiment** (`src/spatial_cv.py`). Group patches into **50 km grid blocks** (UTM zone + easting/northing cell). Train the identical model twice:
+- **Random split** — 20% of *images* held out (neighbours leak across)
+- **Spatial split** — 20% of *blocks* held out whole (no neighbour can leak)
+Same architecture, epochs, learning rate, code path. Only the split differs — so any score difference is pure leakage.
+
+**Honest footnote:** we ran one holdout per condition rather than full 5-fold CV — a deliberate CPU-budget tradeoff, stated in the output JSON. Full GroupKFold is the gold standard; say so if asked.
+
+**Reading the result** (live in the 🧪 Phase B tab): the spatial score is the model's true ability on *new geography*; the gap is how much the random split flattered us. Reporting that gap is the most senior-sounding sentence in your portfolio:
+
+> "My random-split accuracy was X%, but spatially-blocked validation showed the honest number is Y% — I measured the leakage instead of shipping it."
+
 ## What's next (the project's remaining phases)
-- **Phase B**: spatial cross-validation; quantify random-vs-spatial gap
-- **Phase C**: full Sentinel-2 tiles; CNN vs transformer; per-class IoU
-- **Phase D**: metrics-first README + short write-up
+- **Phase B**: ✅ done — see the 🧪 tab for your measured gap
+- **Phase C**: fine-tune vs frozen; CNN vs transformer; per-class IoU
+- **Phase D**: publish + mock-interview gate (12+/14 on the 🎯 Quiz tab)

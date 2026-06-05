@@ -37,6 +37,14 @@ DATA_DIR = ROOT / "data"
 OUT_DIR = ROOT / "outputs"
 OUT_DIR.mkdir(exist_ok=True)
 
+# LESSON: the pretrained ResNet expects inputs scaled the same way ImageNet
+# was — shared here so every experiment preprocesses identically.
+IMAGENET_TRANSFORM = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                         std=[0.229, 0.224, 0.225]),
+])
+
 
 def pick_device() -> torch.device:
     """Prefer Apple GPU (MPS) when available, otherwise CPU.
@@ -73,14 +81,8 @@ def main() -> None:
     device = pick_device()
     print(f"Device: {device}")
 
-    # LESSON: normalization. The pretrained ResNet expects inputs scaled the
-    # same way ImageNet was — so we reuse ImageNet's channel means/stds.
-    tf = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                             std=[0.229, 0.224, 0.225]),
-    ])
-    ds = datasets.EuroSAT(root=DATA_DIR, download=True, transform=tf)
+    ds = datasets.EuroSAT(root=DATA_DIR, download=True,
+                          transform=IMAGENET_TRANSFORM)
     classes = ds.classes  # grab before random_split wraps ds in a Subset
 
     if args.subset < 1.0:
