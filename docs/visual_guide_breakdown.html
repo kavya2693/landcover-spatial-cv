@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>The Whole Project, Explained Simply — Revision Edition</title>
+<style>
+  :root { --bg:#0f1419; --card:#1a2129; --ink:#e8edf2; --dim:#8b9aab; --accent:#4fc3f7; --good:#66bb6a; --warn:#ffa726; --bad:#ef5350; }
+  * { box-sizing:border-box; }
+  body { background:var(--bg); color:var(--ink); font-family:-apple-system,'Segoe UI',sans-serif; margin:0; padding:24px; line-height:1.65; }
+  .wrap { max-width:880px; margin:0 auto; }
+  h1 { color:var(--accent); font-size:1.6em; }
+  h2 { color:var(--accent); margin-top:40px; }
+  .card { background:var(--card); border-radius:12px; padding:18px 24px; margin:14px 0; }
+  .dim { color:var(--dim); }
+  .stepNum { display:inline-block; background:var(--accent); color:#04222e; width:34px; height:34px; border-radius:50%; text-align:center; line-height:34px; font-weight:700; margin-right:10px; }
+  .jargon { background:#243140; border-radius:8px; padding:8px 14px; margin-top:10px; font-size:.9em; }
+  .jargon b { color:var(--warn); }
+  .num { color:var(--good); font-weight:700; }
+  .flash { background:#1c3a52; border:1px solid #2a5a7a; border-radius:12px; padding:16px 20px; margin:10px 0; cursor:pointer; }
+  .flash .q { font-weight:600; }
+  .flash .a { display:none; margin-top:10px; color:#c6d2de; border-top:1px solid #2a5a7a; padding-top:10px; }
+  .flash.open .a { display:block; }
+  .flash::after { content:'👆 tap to reveal'; color:var(--dim); font-size:.78em; display:block; margin-top:6px; }
+  .flash.open::after { content:''; }
+  table { border-collapse:collapse; width:100%; }
+  td, th { padding:8px 12px; border:1px solid #2a3542; text-align:left; font-size:.92em; }
+  th { color:var(--accent); }
+  a { color:var(--accent); }
+  .home { display:inline-block; background:#243140; border-radius:10px; padding:8px 16px; margin-bottom:8px; text-decoration:none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<a class="home" href="visual_guide.html">← back to the Learning Hub</a>
+
+<h1>🛰️ The Whole Project, Explained Simply</h1>
+<p class="dim">Revision edition — every fancy term in this project, dumbed down to plain words, with the real numbers from <i>your</i> build. Read top to bottom (~10 min), then flip the flashcards.</p>
+
+<h2>The story in 8 steps</h2>
+
+<div class="card"><span class="stepNum">1</span><b>The job: sort satellite photos into 10 bins.</b><br>
+A satellite took 27,000 tiny photos of Europe. Each photo shows ONE kind of land — forest, river, houses, crops… Our program's whole job: look at a photo, say which of the <span class="num">10</span> bins it belongs in. That's it. Everything else is detail.
+<div class="jargon">📖 The fancy words: <b>image classification</b> — photo in, label out. <b>EuroSAT</b> — the name of this photo collection. <b>Sentinel-2</b> — the European satellite that took them.</div></div>
+
+<div class="card"><span class="stepNum">2</span><b>To a computer, a photo is just a grid of numbers.</b><br>
+Each photo is 64×64 tiny dots, and every dot is 3 numbers (how much red, green, blue). So one photo = <span class="num">12,288 numbers</span>. "Recognizing a forest" really means "spotting a pattern in 12,288 numbers." <a href="visual_guide.html">Hover the real grid in the 📚 Learn tab.</a>
+<div class="jargon">📖 The fancy words: <b>pixel</b> — one dot. <b>tensor</b> — the box of numbers (ours is 3×64×64). <b>RGB channels</b> — the red/green/blue layers.</div></div>
+
+<div class="card"><span class="stepNum">3</span><b>We didn't teach a brain from scratch — we borrowed one.</b><br>
+Training eyes from zero needs millions of photos and weeks of computing. Instead we took <b>ResNet18</b> — a network already trained on 1.2 million everyday photos, so it already knows edges, textures, shapes — and <b>froze</b> it (locked its knowledge). We bolted on one tiny new final layer and taught ONLY that. Of its <span class="num">11.2 million</span> dials, we adjusted just <span class="num">5,130</span> — 0.05%. That's why a laptop with no GPU trained it in ~7 minutes.
+<div class="jargon">📖 The fancy words: <b>transfer learning</b> — reusing a pre-trained network. <b>frozen backbone</b> — the locked part. <b>head</b> — the small new layer we trained. <b>pretrained weights</b> — the borrowed knowledge.</div></div>
+
+<div class="card"><span class="stepNum">4</span><b>Teaching = guess, get corrected, adjust. Repeat 21,600 times. Three times over.</b><br>
+Show a photo → the model guesses → we reveal the right answer → a score says HOW wrong it was → every dial nudges a tiny bit toward less-wrong. One full pass through all training photos is an <b>epoch</b>; we did <span class="num">3</span>. Our wrongness score fell from <span class="num">0.94 to 0.47</span> — that falling number IS learning.
+<div class="jargon">📖 The fancy words: <b>loss</b> — the wrongness score. <b>gradient descent / backpropagation</b> — the math that decides which way to nudge each dial. <b>optimizer (Adam)</b> — the nudging strategy. <b>learning rate</b> — nudge size.</div></div>
+
+<div class="card"><span class="stepNum">5</span><b>The exam: photos it never studied.</b><br>
+Scoring the model on photos it trained on would be like grading students on questions they memorized. So we hid <span class="num">5,400 photos (20%)</span> during training and tested on those strangers: <span class="num">85.1%</span> correct. Anyone quoting accuracy should be asked: "on data the model saw, or never saw?"
+<div class="jargon">📖 The fancy words: <b>train/validation split</b> — study set vs exam set. <b>unseen data</b> — never used for adjusting dials. <b>generalization</b> — doing well on strangers. <b>overfitting</b> — memorizing instead of learning.</div></div>
+
+<div class="card"><span class="stepNum">6</span><b>One number can lie, so we look at WHICH mistakes it makes.</b><br>
+A table shows truth-vs-guess for every pair of bins. Ours revealed the model mixed up <b>River with Highway <span class="num">81 times</span></b> — both are long thin lines across land! And since some bins have more photos than others, we also report <b>kappa <span class="num">0.834</span></b> — a stricter score that subtracts lucky guessing (0 = guessing, 1 = perfect).
+<div class="jargon">📖 The fancy words: <b>confusion matrix</b> — the truth-vs-guess table. <b>Cohen's kappa</b> — luck-corrected accuracy. <b>class imbalance</b> — unequal bin sizes.</div></div>
+
+<div class="card"><span class="stepNum">7</span><b>The detective check: was our exam secretly leaked?</b><br>
+Photos cut from the same farm look nearly identical. If one twin lands in the study set and the other in the exam, the model can "recognize the place" instead of understanding land — score inflated. So we recovered every photo's REAL map location (hidden inside the satellite files' metadata), held out whole <span class="num">50 km</span> chunks of Europe the model never saw any part of, and re-ran the exam.
+<div class="jargon">📖 The fancy words: <b>spatial autocorrelation</b> — near things look alike. <b>data leakage</b> — exam answers sneaking into study. <b>spatial cross-validation</b> — exam by region, not by photo. <b>GeoTIFF</b> — image file carrying map coordinates.</div></div>
+
+<div class="card"><span class="stepNum">8</span><b>The verdict: no cheating found — and we know why.</b><br>
+Exam-by-region scored <span class="num">85.6%</span> vs <span class="num">85.2%</span> random — no drop, no leak. Why? Cheating-by-memorizing needs memory, and we only trained 5,130 dials — too small to memorize places. That's an honest <b>null result</b>, and it sets up the sequel: unlock all 11.2 million dials (Phase C) and see if the cheating appears. <a href="visual_guide.html">See the real map in the 🧪 Phase B tab.</a>
+<div class="jargon">📖 The fancy words: <b>null result</b> — we looked for an effect and honestly found none. <b>model capacity</b> — how much it CAN memorize. <b>fine-tuning</b> — unlocking the frozen part.</div></div>
+
+<h2>⚡ Flashcards — flip to test yourself</h2>
+<div class="flash"><div class="q">What does this project actually do, in one sentence?</div><div class="a">Takes a 64×64 satellite photo and sorts it into one of 10 land-cover bins (forest, river, crops…), scoring 85% on photos it never saw.</div></div>
+<div class="flash"><div class="q">Why could we train it on a laptop in minutes?</div><div class="a">Transfer learning: we borrowed an already-trained ResNet18, froze its 11.2M dials, and only trained a tiny 5,130-dial final layer.</div></div>
+<div class="flash"><div class="q">What is "loss" and what did ours do?</div><div class="a">The wrongness score the model tries to shrink. Ours fell 0.94 → 0.47 over 3 epochs — falling loss = learning.</div></div>
+<div class="flash"><div class="q">Why isn't accuracy alone trustworthy?</div><div class="a">It hides WHICH mistakes happen (ours mixed River with Highway 81×) and it can be inflated by lucky guessing on imbalanced bins — that's why we also report kappa (0.834).</div></div>
+<div class="flash"><div class="q">What is spatial leakage, in plain words?</div><div class="a">Twin photos from the same farm landing in both study set and exam set — the model recognizes the PLACE instead of understanding the land, inflating the score.</div></div>
+<div class="flash"><div class="q">How did we test for leakage, and what did we find?</div><div class="a">Recovered every photo's map location from GeoTIFF metadata, held out whole 50km regions, retrained identically. Found NO gap (85.6% vs 85.2%) — our tiny trained head can't memorize places. Honest null result.</div></div>
+<div class="flash"><div class="q">What's the one-line resume description?</div><div class="a">"Built a satellite land-cover classifier (transfer learning, 85% on unseen data) and validated it with spatial cross-validation — recovering patch coordinates from GeoTIFF metadata to rule out leakage."</div></div>
+<div class="flash"><div class="q">What's the Phase C cliffhanger?</div><div class="a">Does unlocking all 11.2M parameters (fine-tuning) reopen the leakage gap? More capacity = more ability to memorize places. We predicted leakage needs memory — now we test it.</div></div>
+
+<h2>📖 Plain-words glossary</h2>
+<div class="card"><table>
+<tr><th>Term</th><th>Plain words</th></tr>
+<tr><td>Model</td><td>A giant adjustable formula: numbers in → label out</td></tr>
+<tr><td>Weights / parameters</td><td>The formula's adjustable dials (ours has 11.2M; we tuned 5,130)</td></tr>
+<tr><td>Training</td><td>Auto-adjusting dials by correcting mistakes, thousands of times</td></tr>
+<tr><td>Epoch</td><td>One full pass through all training photos (we did 3)</td></tr>
+<tr><td>Batch</td><td>Photos processed per step (ours: 128 at a time)</td></tr>
+<tr><td>Loss</td><td>Wrongness score; training shrinks it</td></tr>
+<tr><td>Gradient descent</td><td>The "which way do I turn each dial" math</td></tr>
+<tr><td>Backpropagation</td><td>How the wrongness signal travels back through the layers</td></tr>
+<tr><td>Learning rate</td><td>How big each dial-turn is</td></tr>
+<tr><td>CNN</td><td>A network that scans images with small pattern-detectors</td></tr>
+<tr><td>Convolution / filter</td><td>One sliding pattern-detector (e.g. edge-finder)</td></tr>
+<tr><td>ResNet18</td><td>A classic 18-layer CNN; our borrowed brain</td></tr>
+<tr><td>Transfer learning</td><td>Reuse a trained network instead of starting from zero</td></tr>
+<tr><td>Frozen backbone</td><td>The borrowed part, locked so it can't change</td></tr>
+<tr><td>Head</td><td>The small new final layer we actually trained</td></tr>
+<tr><td>Softmax</td><td>Turns 10 raw scores into 10 probabilities summing to 1</td></tr>
+<tr><td>Validation set</td><td>Hidden exam photos (5,400) never used for training</td></tr>
+<tr><td>Overfitting</td><td>Memorizing the study set; great in practice, fails the exam</td></tr>
+<tr><td>Confusion matrix</td><td>Truth-vs-guess table; shows WHICH bins get mixed up</td></tr>
+<tr><td>Cohen's kappa</td><td>Accuracy with lucky guessing subtracted (0=luck, 1=perfect)</td></tr>
+<tr><td>Spatial autocorrelation</td><td>Nearby places look alike (Tobler's law)</td></tr>
+<tr><td>Data leakage</td><td>Exam information sneaking into the study set</td></tr>
+<tr><td>Spatial cross-validation</td><td>Exam by held-out REGIONS, not random photos</td></tr>
+<tr><td>GeoTIFF</td><td>An image file that also stores its map location</td></tr>
+<tr><td>Null result</td><td>Looked for an effect, honestly found none — still science</td></tr>
+</table></div>
+
+<p class="dim" style="margin-top:30px">Next steps: <a href="visual_guide.html">the interactive hub</a> (Learn → Phase B → score 12+/14 on the Quiz) · ask the 💬 tutor for an animation of anything here.</p>
+</div>
+<script>
+document.querySelectorAll('.flash').forEach(f =>
+  f.addEventListener('click', () => f.classList.toggle('open')));
+</script>
+</body>
+</html>
