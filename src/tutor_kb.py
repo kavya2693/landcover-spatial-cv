@@ -11,6 +11,7 @@ Project facts referenced throughout:
 
 No third-party imports. Pure standard-library Python.
 """
+import re
 
 
 # ---------------------------------------------------------------------------
@@ -1298,23 +1299,27 @@ frame();
 # ---------------------------------------------------------------------------
 
 def lookup(question):
-    """Return the KB entry with the most keyword hits, or None if zero hits.
+    """Return the best KB entry, or None unless the match is CONFIDENT.
 
-    The question is lowercased; each keyword is matched as a substring.
+    Fixes for irrelevant matches: keywords match on word boundaries (so
+    'lr' can't fire inside 'already'), and a single weak hit is rejected —
+    we accept only >=2 distinct keyword hits, or one hit on a specific
+    keyword (a multi-word phrase or a long term). Unsure -> None -> the
+    live AI answers instead of a wrong instant card.
     """
     if not question:
         return None
     q = question.lower()
-    best = None
-    best_hits = 0
+    best, best_score = None, 0
     for entry in KB:
-        hits = 0
+        hits, specific = 0, False
         for kw in entry["keywords"]:
-            if kw in q:
+            if re.search(r"\b" + re.escape(kw) + r"\b", q):
                 hits += 1
-        if hits > best_hits:
-            best_hits = hits
-            best = entry
-    if best_hits == 0:
-        return None
+                if " " in kw or len(kw) >= 8:
+                    specific = True
+        if hits and (hits >= 2 or specific):
+            score = hits + (1 if specific else 0)
+            if score > best_score:
+                best_score, best = score, entry
     return best

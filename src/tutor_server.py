@@ -47,46 +47,72 @@ NULL result (no measurable leakage; gap -0.4% is within noise). Hypothesis: the 
 tiny 5,130-param head lacks capacity to memorize places; Phase C will test if fine-tuning all 11M
 params reopens the gap. Coordinates came from GeoTIFF tags (tiepoint/scale/EPSG) via tifffile."""
 
-SYSTEM_PROMPT = f"""You are a warm, visual-first ML tutor inside an interactive guide. The student
-is a complete beginner building a EuroSAT land-cover classifier (27,000 Sentinel-2 patches, 64x64,
-10 classes; ResNet18 ImageNet-pretrained with FROZEN backbone + new 512->10 head; trained 3 epochs
-on a MacBook CPU; results: 85.1% validation accuracy, Cohen's kappa 0.834). She is preparing for
-ML interviews. {SECTION_MAP}
+CONTEXT = f"""You are a warm ML tutor inside an interactive guide. The student is a beginner
+building a EuroSAT land-cover classifier (27,000 Sentinel-2 patches, 64x64, 10 classes; ResNet18
+frozen-backbone 85.1% acc / kappa 0.834; full fine-tune 96.4% random / 95.8% spatial; ViT-tiny
+benchmark 96.1% spatial). She is preparing for ML interviews. {SECTION_MAP}"""
 
-Answer her question. Respond with ONLY a JSON object, no markdown fences, with EXACTLY these keys:
-  "answer": 3-6 beginner-friendly sentences anchored to HER project's real numbers where relevant.
+# Fast path: text only — ~8-15s on the fast model vs ~90s with an animation.
+SYSTEM_PROMPT_TEXT = f"""{CONTEXT}
+
+Answer her question. Respond ONLY a JSON object, no markdown fences, EXACTLY these keys:
+  "answer": 3-5 beginner-friendly sentences anchored to HER project's real numbers where relevant.
   "tab_title": a 2-4 word title for this concept.
-  "is_extension": true if this concept goes beyond what the guide's six sections already cover, else false.
-  "visual_html": a COMPLETE self-contained HTML document (it becomes an iframe srcdoc) that VISUALLY
-    teaches the answer with an ANIMATION. Rules: inline CSS+JS only, no external resources; dark theme
-    (body background #0f1419, text #e8edf2, accent #4fc3f7, orange #ffa726, green #66bb6a); one
-    <canvas width=480 height=240> animated with requestAnimationFrame; the animation must loop and
-    genuinely illustrate the concept with moving parts and 2-4 short labels.
-CRITICAL: keep visual_html COMPACT — under 1600 characters. Terse JS, single-letter variables fine,
-no comments inside it. Total response under 2400 characters. Valid JSON only."""
+  "is_extension": true if the concept goes beyond the guide's sections, else false.
+Total under 800 characters. Valid JSON only."""
+
+# Slow path, on demand only (the "draw it" button): generate the animation.
+SYSTEM_PROMPT_VISUAL = f"""{CONTEXT}
+
+The student asked: a question, and got a text answer (both provided). Create ONLY a JSON object,
+no markdown fences, with EXACTLY one key:
+  "visual_html": a COMPLETE self-contained HTML document (iframe srcdoc) that VISUALLY teaches
+    the answer with an ANIMATION. Inline CSS+JS only, no external resources; dark theme (body
+    #0f1419, text #e8edf2, accent #4fc3f7, orange #ffa726, green #66bb6a); one
+    <canvas width=480 height=240> animated with requestAnimationFrame; loops; 2-4 short labels.
+CRITICAL: visual_html under 1600 characters. Terse JS, no comments inside. Valid JSON only."""
 
 
-def ask_model(question: str) -> dict | None:
+def _inference(system_prompt: str, user_prompt: str, level: str,
+               timeout_s: int) -> dict | None:
     """Shell out to the PAI Inference tool; parse its JSON reply."""
     try:
         with _inference_slots:
             proc = subprocess.run(
-                ["bun", str(INFERENCE), "--level", INFERENCE_LEVEL,
-                 "--timeout", str(INFERENCE_TIMEOUT_S * 1000),
-                 SYSTEM_PROMPT, question],
-                capture_output=True, text=True, timeout=INFERENCE_TIMEOUT_S + 10)
+                ["bun", str(INFERENCE), "--level", level,
+                 "--timeout", str(timeout_s * 1000),
+                 system_prompt, user_prompt],
+                capture_output=True, text=True, timeout=timeout_s + 10)
         raw = proc.stdout.strip()
         # Models sometimes wrap JSON in ```json fences — strip them.
         raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.MULTILINE)
         start, end = raw.find("{"), raw.rfind("}")
         if start == -1:
             return None
-        data = json.loads(raw[start:end + 1])
-        if {"answer", "visual_html", "tab_title"} <= data.keys():
-            data["source"] = "ai"  # each producer labels its own answers
-            return data
+        return json.loads(raw[start:end + 1])
     except (subprocess.TimeoutExpired, json.JSONDecodeError, OSError):
         pass
+    return None
+
+
+def ask_model(question: str) -> dict | None:
+    """Fast path: text-only answer on the fast model (~8-15s measured)."""
+    data = _inference(SYSTEM_PROMPT_TEXT, question, "fast", 60)
+    if data and {"answer", "tab_title"} <= data.keys():
+        data["source"] = "ai"
+        data["visual_html"] = ""          # visuals are drawn on demand
+        data["can_draw"] = True           # tells the UI to offer "draw it"
+        return data
+    return None
+
+
+def draw_visual(question: str, answer: str) -> dict | None:
+    """Slow path, user-requested: generate the animation for a given answer."""
+    prompt = f"Question: {question}\nText answer she received: {answer}"
+    data = _inference(SYSTEM_PROMPT_VISUAL, prompt, INFERENCE_LEVEL,
+                      INFERENCE_TIMEOUT_S)
+    if data and data.get("visual_html"):
+        return {"visual_html": data["visual_html"]}
     return None
 
 
@@ -139,23 +165,36 @@ class TutorHandler(SimpleHTTPRequestHandler):
             return
         super().do_GET()
 
-    def do_POST(self):
-        if self.path != "/ask":
-            self.send_error(404)
-            return
-        length = int(self.headers.get("Content-Length", 0))
-        try:
-            question = json.loads(self.rfile.read(length))["question"][:2000]
-        except (json.JSONDecodeError, KeyError):
-            self.send_error(400, "expected JSON {question: ...}")
-            return
-        result = kb_answer(question) or ask_model(question) or apology()
+    def _send_json(self, result: dict):
         body = json.dumps(result).encode()
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+    def do_POST(self):
+        length = int(self.headers.get("Content-Length", 0))
+        try:
+            payload = json.loads(self.rfile.read(length))
+        except json.JSONDecodeError:
+            self.send_error(400, "expected JSON")
+            return
+        if self.path == "/ask":
+            question = str(payload.get("question", ""))[:2000]
+            if not question:
+                self.send_error(400, "expected JSON {question: ...}")
+                return
+            # force_ai: the "ask Claude instead" escape hatch when a KB card
+            # was related-but-not-exactly what she asked
+            kb = None if payload.get("force_ai") else kb_answer(question)
+            self._send_json(kb or ask_model(question) or apology())
+        elif self.path == "/draw":
+            result = draw_visual(str(payload.get("question", ""))[:2000],
+                                 str(payload.get("answer", ""))[:2000])
+            self._send_json(result or {"visual_html": "", "error": "draw failed"})
+        else:
+            self.send_error(404)
 
     def log_message(self, fmt, *args):  # quieter logs: only /ask and errors
         if any("/ask" in str(a) for a in args) or "code" in fmt:

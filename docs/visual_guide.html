@@ -542,23 +542,52 @@ then visit <a href="http://localhost:8787/visual_guide.html" style="color:#ffcc8
   if (!history.length) bubble({ role: 'bot', text: 'Hi! I\'m your visual tutor. Ask me anything about the guide — tap a chip to reference a section, and I\'ll answer with an animation.', source: '' });
 
   // ---- ask flow ----
-  async function ask() {
-    const q = $('askInput').value.trim(); if (!q) return;
+  async function ask(forceAi, presetQ) {
+    const q = presetQ || $('askInput').value.trim(); if (!q) return;
     if (isFile) { $('fileBanner').scrollIntoView({ behavior: 'smooth' }); return; }
     $('askInput').value = '';
-    const um = { role: 'user', text: q }; history.push(um); save('tutorHistory', history); bubble(um);
+    if (!presetQ) { const um = { role: 'user', text: q }; history.push(um); save('tutorHistory', history); bubble(um); }
     const t = document.createElement('div'); t.className = 'msg bot typing';
-    t.textContent = '🎨 drawing your visual explanation — instant if I know it, up to ~2 min if Claude draws it fresh';
+    t.textContent = '💭 thinking — instant if I know it, ~10-60s if Claude answers fresh';
     $('chatLog').appendChild(t); $('chatLog').scrollTop = 1e9;
     $('askBtn').disabled = true;
     try {
       const r = await fetch('/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: q }) });
+        body: JSON.stringify({ question: q, force_ai: !!forceAi }) });
       const a = await r.json();
       t.remove();
       const bm = { role: 'bot', text: a.answer, visual: a.visual_html, source: a.source };
-      history.push(bm); history = history.slice(-30); save('tutorHistory', history); bubble(bm);
+      history.push(bm); history = history.slice(-30); save('tutorHistory', history);
+      const el = bubble(bm);
       if (window.speakAnswer) window.speakAnswer(a.answer);   // voice output if enabled
+      // KB answers are instant but keyword-matched — offer the escape hatch
+      // for the times the card is related but not exactly what she asked.
+      if (a.source === 'offline-kb' && !forceAi) {
+        const rb = document.createElement('button');
+        rb.textContent = '↻ not quite it? ask Claude (10-60s)';
+        rb.style.cssText = 'margin-top:8px;font-size:.78em;padding:4px 10px;background:#3a4a5c;color:var(--ink)';
+        rb.addEventListener('click', () => { rb.remove(); ask(true, q); });
+        el.appendChild(rb);
+      }
+      // Fast text answers offer an on-demand animation (the slow ~90s path
+      // only runs when SHE asks for it, not on every question).
+      if (a.can_draw && !a.visual_html) {
+        const db = document.createElement('button');
+        db.textContent = '🎨 draw it'; db.style.cssText = 'margin-top:8px;font-size:.8em;padding:5px 12px';
+        db.addEventListener('click', async () => {
+          db.disabled = true; db.textContent = '🎨 drawing… up to ~90s';
+          try {
+            const dr = await fetch('/draw', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ question: q, answer: a.answer }) });
+            const d = await dr.json();
+            if (d.visual_html) {
+              el.appendChild(vizFrame(d.visual_html)); db.remove();
+              bm.visual = d.visual_html; save('tutorHistory', history);   // persist the drawing
+            } else { db.textContent = '⚠️ drawing failed — try again'; db.disabled = false; }
+          } catch (e) { db.textContent = '⚠️ drawing failed — try again'; db.disabled = false; }
+        });
+        el.appendChild(db);
+      }
       if (a.is_extension && a.tab_title && a.visual_html && !tabs.some(x => x.title === a.tab_title)) {
         tabs.push({ title: a.tab_title, answer: a.answer, visual: a.visual_html });
         save('tutorTabs', tabs); renderTabs();
@@ -568,7 +597,7 @@ then visit <a href="http://localhost:8787/visual_guide.html" style="color:#ffcc8
     }
     $('askBtn').disabled = false; $('askInput').focus();
   }
-  $('askBtn').addEventListener('click', ask);
+  $('askBtn').addEventListener('click', () => ask());
   $('askInput').addEventListener('keydown', e => { if (e.key === 'Enter') ask(); });
 
   // ---- VOICE INPUT: talk instead of type (browser-native, no keys) ----
