@@ -55,7 +55,7 @@
   <div class="roadRow"><div class="roadDot" style="background:var(--warn)"></div><b>Phase B — Spatial cross-validation</b>&nbsp;<span class="dim">🔄 results land in the <a href="#" data-panel="phaseb" style="color:var(--accent)">Phase B tab</a> automatically</span></div>
   <div class="roadRow"><div class="roadDot" style="background:#3a4a5c"></div><b>Phase C — Fine-tune + transformer benchmark</b>&nbsp;<span class="dim">next — see the <a href="#" data-panel="phasec" style="color:var(--accent)">Phase C tab</a></span></div>
   <div class="roadRow"><div class="roadDot" style="background:#3a4a5c"></div><b>Phase D — Publish + mock-interview gate</b>&nbsp;<span class="dim">final</span></div>
-  <p class="dim">Suggested path: 📚 Learn (all 6 sections) → ask the tutor anything unclear → 🧪 Phase B → 🎯 Quiz until you score 12+/14.</p>
+  <p class="dim">Suggested path: 📚 Learn (all 6 sections) → ask the tutor anything unclear → 🧪 Phase B → 🎯 Quiz until you score 85%+.</p>
   <p>🐣 <b>Rusty on ML or starting fresh?</b> Read <a href="visual_guide_breakdown.html" id="breakdownLink" style="color:var(--accent)">the plain-words breakdown</a> first — the whole project as an 8-step story, flashcards, and a no-jargon glossary.</p>
 </div>
 <div class="card" id="progressCard">
@@ -66,8 +66,8 @@
   <div class="row" id="progressStats">
     <div class="card metric" data-panel="learn" style="cursor:pointer" title="Distinct tabs you have opened, out of six: Overview, Learn, Phase B, Phase C, Quiz/FAQ, plus the plain-words breakdown page.">
       <div class="big" id="statTabs" style="color:var(--accent)">0/6</div><div class="dim">tabs explored</div></div>
-    <div class="card metric" data-panel="quiz" style="cursor:pointer" title="Your best quiz score so far. The Phase B brief gate is 12 or more out of 14.">
-      <div class="big" id="statQuiz" style="color:var(--warn)">0/14 🔜</div><div class="dim">quiz best</div></div>
+    <div class="card metric" data-panel="quiz" style="cursor:pointer" title="Your best quiz score so far. The gate is 85%.">
+      <div class="big" id="statQuiz" style="color:var(--warn)">0/18 🔜</div><div class="dim">quiz best</div></div>
     <div class="card metric" data-panel="overview" style="cursor:pointer" title="Whether you have opened the plain-words breakdown page (8-step story, flashcards, glossary) at least once.">
       <div class="big" id="statBreakdown" style="color:var(--dim)">🔜</div><div class="dim">flashcards page</div></div>
     <div class="card metric" data-panel="faq" style="cursor:pointer" title="How many questions you have asked the AI tutor in the sidebar so far.">
@@ -188,7 +188,7 @@
 <!-- ════════════════ TAB: QUIZ ════════════════ -->
 <div class="panel" id="panel-quiz">
   <h2 style="margin-top:10px">🎯 Interview Quiz <span id="quizScore" class="dim"></span></h2>
-  <p class="dim">14 questions anchored to YOUR project. Pick answers, then hit Grade. Best score is remembered — the Phase B brief gate is 12+/14.</p>
+  <p class="dim">18 questions anchored to YOUR project. Pick answers, then hit Grade. Best score is remembered — the gate is 85%.</p>
   <div id="quizList"><p class="dim">Loading questions…</p></div>
   <div class="row" style="justify-content:flex-start">
     <button id="gradeBtn">Grade my answers</button>
@@ -697,15 +697,16 @@ then visit <a href="http://localhost:8787/visual_guide.html" style="color:#ffcc8
     const questions = tutorQuestionCount();
 
     $('statTabs').textContent = tabCount + '/6';
-    const quizPass = quizBest >= 12;
-    $('statQuiz').textContent = quizBest + '/14 ' + (quizPass ? '✅' : '🔜');
+    const QUIZ_TOTAL = 18;                       // keep in sync with quiz_bank.json
+    const quizPass = quizBest >= Math.ceil(QUIZ_TOTAL * 0.85);
+    $('statQuiz').textContent = quizBest + '/' + QUIZ_TOTAL + ' ' + (quizPass ? '✅' : '🔜');
     $('statQuiz').style.color = quizPass ? 'var(--good)' : 'var(--warn)';
     $('statBreakdown').textContent = breakdownSeen ? '✅' : '🔜';
     $('statBreakdown').style.color = breakdownSeen ? 'var(--good)' : 'var(--dim)';
     $('statTutor').textContent = questions;
 
     // average of four completion fractions
-    const frac = (tabCount / 6 + Math.min(quizBest, 14) / 14 +
+    const frac = (tabCount / 6 + Math.min(quizBest, QUIZ_TOTAL) / QUIZ_TOTAL +
                   (breakdownSeen ? 1 : 0) + Math.min(questions, 10) / 10) / 4;
     $('progressBarFill').style.width = (frac * 100).toFixed(0) + '%';
   }

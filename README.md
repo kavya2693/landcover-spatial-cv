@@ -2,6 +2,18 @@
 
 Classifying 27,000 EuroSAT satellite patches into 10 land-cover classes (Forest, River, Industrial, cropland types, ...) with **spatially honest evaluation** — measuring how much a standard random train/val split overstates performance versus spatial cross-validation.
 
+## The story (read this first)
+
+I suspected my model's accuracy was lying to me. Satellite datasets are cut from large scenes, so near-identical neighbouring patches can land on both sides of a random train/val split — letting a model "recognize the place" instead of learning the concept. To test it, I recovered the real-world coordinates of all 27,000 patches from the multispectral GeoTIFFs' metadata tags and re-validated on held-out 50 km geographic blocks.
+
+**Experiment 1 (frozen backbone):** no gap at all — 85.2% random vs 85.6% spatial. An honest null. My hypothesis: leakage requires *memorization capacity*, and a 5,130-parameter head has none.
+
+**Experiment 2 (full fine-tune, 11.2M params):** accuracy jumped to 96.4% — and a leakage gap **appeared** (+0.7%), exactly as the capacity hypothesis predicted. Small, but in the predicted direction on a pre-registered question.
+
+**Experiment 3 (architecture):** a half-size Vision Transformer matched the CNN (96.1% vs 96.3%) on identical spatial folds — and per-class IoU showed both architectures fail on the *same* vegetation look-alikes, pointing at a data limit (10 m RGB), not a model limit.
+
+Everything trained on a laptop CPU with free data. The number I report is the spatially-validated **95.8%** — the honest one.
+
 ## Results (Phase A baseline — updated as phases complete)
 
 | Model | Split | Accuracy | Cohen's kappa |
@@ -33,8 +45,11 @@ Land-cover classification is the foundational task of Earth observation. This re
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-python src/explore_data.py   # downloads EuroSAT (~90 MB), prints class stats
-python src/train.py --epochs 3
+python src/explore_data.py     # downloads EuroSAT (~90 MB), prints class stats
+python src/train.py --epochs 3 # Phase A: frozen-backbone baseline
+python src/spatial_cv.py       # Phase B: random vs spatial split (needs data/coords.csv, included)
+python src/finetune_cv.py      # Phase C: full fine-tune capacity experiment
+python src/transformer_cv.py   # Phase C: CNN vs ViT benchmark + per-class IoU
 ```
 
 ## Roadmap

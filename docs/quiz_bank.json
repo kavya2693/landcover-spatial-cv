@@ -1,215 +1,275 @@
 {
-  "version": 1,
-  "questions": [
-    {
-      "id": "q1",
-      "topic": "dataset",
-      "difficulty": "easy",
-      "question": "What is the input and output of this EuroSAT land-cover model?",
-      "options": [
-        "A continuous water-percentage value predicted from a 256x256 patch",
-        "One of 10 land-cover labels predicted from a 64x64 RGB patch",
-        "A bounding box around each object in a Sentinel-2 tile",
-        "A per-pixel mask over 27 land-cover categories"
-      ],
-      "answer": 1,
-      "explanation": "Each example is a 64x64x3 RGB satellite patch and the model outputs exactly one of 10 mutually exclusive land-cover labels, making this single-label image classification. Predicting a water percentage would be regression, not classification, which is why that tempting option is wrong.",
-      "interview_tip": "Lead with input, output, and number of classes so the interviewer instantly frames the problem."
-    },
-    {
-      "id": "q2",
-      "topic": "transfer",
-      "difficulty": "easy",
-      "question": "What does 'frozen backbone' mean in this project's baseline?",
-      "options": [
-        "Every layer including the new head is locked and nothing trains",
-        "The pretrained conv layers are fixed and only the new 10-class head trains",
-        "The backbone trains while the final head stays at random weights",
-        "Training pauses whenever validation accuracy drops"
-      ],
-      "answer": 1,
-      "explanation": "Freezing sets the pretrained ResNet18 convolutional weights so they do not update, acting as a fixed feature extractor, while only the new 10-class head learns. The option saying nothing trains is wrong because the head must still learn, which is the whole point of fitting the new classes.",
-      "interview_tip": "Frame freezing as a fast, overfit-resistant baseline with an accuracy ceiling."
-    },
-    {
-      "id": "q3",
-      "topic": "dataset",
-      "difficulty": "medium",
-      "question": "The baseline uses a random 80/20 split with seed 42. Why fix the seed?",
-      "options": [
-        "It guarantees the classes are perfectly balanced in each split",
-        "It improves validation accuracy by choosing easier test images",
-        "It makes the split reproducible so results are comparable across runs",
-        "It prevents the model from overfitting the training set"
-      ],
-      "answer": 2,
-      "explanation": "A fixed seed makes random_split deterministic, so the same images land on the same side every run and experiments stay comparable. It does nothing for class balance (that needs stratification) and does not reduce overfitting; the seed only controls reproducibility, which is why those distractors are wrong.",
-      "interview_tip": "Mention stratification as the natural upgrade for preserving class proportions."
-    },
-    {
-      "id": "q4",
-      "topic": "cnn",
-      "difficulty": "medium",
-      "question": "Why are CNNs well suited to the 64x64 satellite patches here?",
-      "options": [
-        "They treat every pixel as independent, maximizing flexibility",
-        "They exploit local pixel structure and translation invariance with few parameters",
-        "They require less data than any other model regardless of task",
-        "They remove the need for a train/validation split"
-      ],
-      "answer": 1,
-      "explanation": "CNNs slide filters that detect local patterns and reuse them anywhere in the image (translation invariance), so a 'forest texture' detector works in any corner with far fewer parameters than treating pixels independently. The independent-pixel option is the opposite of how convolutions work, making it the trap answer.",
-      "interview_tip": "Say 'nearby pixels are related and a pattern means the same thing wherever it appears.'"
-    },
-    {
-      "id": "q5",
-      "topic": "cnn",
-      "difficulty": "medium",
-      "question": "What problem do ResNet's residual (skip) connections solve?",
-      "options": [
-        "They shrink the model so it fits on a CPU",
-        "They add dropout automatically to prevent overfitting",
-        "They give gradients a shortcut so very deep networks train reliably",
-        "They convert logits into probabilities at the output"
-      ],
-      "answer": 2,
-      "explanation": "Skip connections let a block learn only the residual and give gradients a clean highway back to early layers, fixing the degradation and vanishing-gradient problems of very deep plain networks. The softmax option is wrong because turning logits into probabilities is done by softmax, not skip connections.",
-      "interview_tip": "One-liner: 'skip connections let you train very deep networks by giving gradients a shortcut.'"
-    },
-    {
-      "id": "q6",
-      "topic": "training",
-      "difficulty": "medium",
-      "question": "Why is CrossEntropyLoss the right loss for this task?",
-      "options": [
-        "It is the standard loss for multi-class single-label classification",
-        "It is designed for regression on continuous land-cover percentages",
-        "It is used for multi-label problems where a patch has several labels",
-        "It maximizes IoU for pixel-level segmentation"
-      ],
-      "answer": 0,
-      "explanation": "Cross-entropy measures how far the predicted probability for the true class is from 1.0 and is the standard for multi-class single-label classification, combining softmax and the loss in one stable step. The regression and multi-label options describe different problem types, and IoU is a segmentation metric, not a classification loss.",
-      "interview_tip": "Note that PyTorch CrossEntropyLoss expects raw logits, not softmax outputs."
-    },
-    {
-      "id": "q7",
-      "topic": "training",
-      "difficulty": "medium",
-      "question": "The baseline trains only 3 epochs on CPU and still converges. Why so few?",
-      "options": [
-        "Because EuroSAT is too small to support more than 3 epochs",
-        "Because Adam disables learning after the third epoch",
-        "Because only a tiny head trains on a frozen backbone, so it converges fast",
-        "Because more epochs always reduce validation accuracy"
-      ],
-      "answer": 2,
-      "explanation": "With the backbone frozen, only the small 10-class head has trainable weights, so there is very little to fit and the model converges in a handful of epochs. The dataset size does not cap epochs and Adam does not stop learning; the speed comes from the small number of trainable parameters.",
-      "interview_tip": "Pair this with 'watch the validation curve and stop when it plateaus.'"
-    },
-    {
-      "id": "q8",
-      "topic": "metrics",
-      "difficulty": "medium",
-      "question": "Validation accuracy is 85.1% with kappa 0.834. What does the confusion matrix add?",
-      "options": [
-        "It corrects accuracy for chance agreement between classes",
-        "It shows exactly which classes get confused, e.g. River predicted as Highway",
-        "It guarantees the random split contained no spatial leakage",
-        "It reports a single summary number that replaces accuracy"
-      ],
-      "answer": 1,
-      "explanation": "A confusion matrix is a 10x10 table whose off-diagonal cells reveal which specific classes are mixed up, such as this project's top confusion of River being predicted as Highway 81 times. Correcting for chance is what kappa does, not the matrix, which is why that option is the tempting but wrong choice.",
-      "interview_tip": "Say you 'read the off-diagonal' to decide what to fix next."
-    },
-    {
-      "id": "q9",
-      "topic": "metrics",
-      "difficulty": "medium",
-      "question": "Why report Cohen's kappa (0.834) alongside the 85.1% accuracy?",
-      "options": [
-        "Kappa measures the spatial distance between train and test patches",
-        "Kappa is always higher than accuracy and looks more impressive",
-        "Kappa adjusts agreement for what you'd get by chance given class frequencies",
-        "Kappa counts only the diagonal of the confusion matrix"
-      ],
-      "answer": 2,
-      "explanation": "Kappa = (observed accuracy - expected-by-chance accuracy) / (1 - expected-by-chance accuracy), so it strips out the agreement you would get just by guessing according to class frequencies. It is not necessarily higher than accuracy and has nothing to do with spatial distance, making those distractors wrong.",
-      "interview_tip": "Reporting kappa signals you understand metrics, not just headline numbers."
-    },
-    {
-      "id": "q10",
-      "topic": "spatial",
-      "difficulty": "medium",
-      "question": "What is spatial autocorrelation and why does it break a random split?",
-      "options": [
-        "Pixels within one patch are correlated, so 64x64 is too small",
-        "Nearby patches tend to be similar, so neighbors aren't independent samples",
-        "Classes are imbalanced, so accuracy overstates rare classes",
-        "Adam correlates gradients across batches, inflating accuracy"
-      ],
-      "answer": 1,
-      "explanation": "Spatial autocorrelation means things near each other on the map tend to be similar, so neighboring patches are not independent and a random split scatters near-twins across train and test. Class imbalance is a separate issue handled by kappa, so that option, while real, does not describe autocorrelation.",
-      "interview_tip": "Drop the phrase 'the IID assumption is violated; spatial samples are not independent.'"
-    },
-    {
-      "id": "q11",
-      "topic": "training",
-      "difficulty": "hard",
-      "question": "Why not train ResNet18 from scratch on EuroSAT instead of using pretrained weights?",
-      "options": [
-        "From-scratch always beats transfer learning given enough epochs",
-        "Random init breaks the skip connections in ResNet18",
-        "27k images is far less than ImageNet's ~1.2M, so it overfits and trains slowly",
-        "PyTorch cannot initialize ResNet18 without pretrained weights"
-      ],
-      "answer": 2,
-      "explanation": "Deep CNNs are data-hungry and ImageNet has roughly 45x more images than EuroSAT's 27k, so from-scratch models tend to overfit or underperform and take far longer to train, which is painful on CPU. The 'always beats' claim is false; from-scratch only wins with very large domain-specific data or images unlike natural photos.",
-      "interview_tip": "Note from-scratch makes sense only with huge domain data or non-photographic imagery."
-    },
-    {
-      "id": "q12",
-      "topic": "spatial",
-      "difficulty": "hard",
-      "question": "Why might the 85.1% random-split accuracy be inflated, and how does spatial CV help?",
-      "options": [
-        "It is inflated by too few epochs; spatial CV adds training passes",
-        "Random split leaks near-duplicate neighbors; spatial CV splits by location",
-        "It is inflated by Adam's learning rate; spatial CV lowers the rate",
-        "It is inflated by RGB normalization; spatial CV uses raw pixels"
-      ],
-      "answer": 1,
-      "explanation": "A random split scatters spatially adjacent, near-duplicate patches across train and test, so the model scores high by recognizing near-twins rather than generalizing. Spatial cross-validation groups patches into geographic blocks so each block goes entirely to train or test, removing the leakage and yielding a lower but honest number.",
-      "interview_tip": "Say the honest, lower spatial-CV number is the one worth optimizing and reporting."
-    },
-    {
-      "id": "q13",
-      "topic": "metrics",
-      "difficulty": "hard",
-      "question": "Precisely, what does kappa correct for that raw accuracy ignores?",
-      "options": [
-        "It corrects for spatial leakage between train and test patches",
-        "It corrects for the chance agreement expected from class frequencies",
-        "It corrects for the learning rate being too high during training",
-        "It corrects for the 64x64 patches losing fine spatial detail"
-      ],
-      "answer": 1,
-      "explanation": "Kappa subtracts the chance-agreement baseline you'd get by guessing according to how frequent each class is, via (observed - expected) / (1 - expected). It does not address spatial leakage, which is fixed by spatial cross-validation, so that closely-related option is the trap here.",
-      "interview_tip": "Keep accuracy, kappa, and spatial CV as three distinct tools for three distinct problems."
-    },
-    {
-      "id": "q14",
-      "topic": "transfer",
-      "difficulty": "hard",
-      "question": "What happens if the input normalization stats don't match ImageNet's expected values?",
-      "options": [
-        "Nothing changes because the frozen backbone is robust to input scale",
-        "Training crashes immediately with a tensor shape error",
-        "The frozen pretrained features misfire because inputs are out of expected range",
-        "Accuracy improves since the head adapts to any normalization"
-      ],
-      "answer": 2,
-      "explanation": "The frozen ImageNet backbone expects pixels scaled and shifted to the same range it was trained on, so wrong Normalize stats push inputs out of distribution and the fixed features misfire, degrading accuracy. It is not a shape error and the tiny frozen-baseline head cannot fully compensate, so the 'robust' and 'improves' options are wrong.",
-      "interview_tip": "Stress that preprocessing must match pretraining whenever you reuse frozen features."
-    }
-  ]
+ "version": 1,
+ "questions": [
+  {
+   "id": "q1",
+   "topic": "dataset",
+   "difficulty": "easy",
+   "question": "What is the input and output of this EuroSAT land-cover model?",
+   "options": [
+    "A continuous water-percentage value predicted from a 256x256 patch",
+    "One of 10 land-cover labels predicted from a 64x64 RGB patch",
+    "A bounding box around each object in a Sentinel-2 tile",
+    "A per-pixel mask over 27 land-cover categories"
+   ],
+   "answer": 1,
+   "explanation": "Each example is a 64x64x3 RGB satellite patch and the model outputs exactly one of 10 mutually exclusive land-cover labels, making this single-label image classification. Predicting a water percentage would be regression, not classification, which is why that tempting option is wrong.",
+   "interview_tip": "Lead with input, output, and number of classes so the interviewer instantly frames the problem."
+  },
+  {
+   "id": "q2",
+   "topic": "transfer",
+   "difficulty": "easy",
+   "question": "What does 'frozen backbone' mean in this project's baseline?",
+   "options": [
+    "Every layer including the new head is locked and nothing trains",
+    "The pretrained conv layers are fixed and only the new 10-class head trains",
+    "The backbone trains while the final head stays at random weights",
+    "Training pauses whenever validation accuracy drops"
+   ],
+   "answer": 1,
+   "explanation": "Freezing sets the pretrained ResNet18 convolutional weights so they do not update, acting as a fixed feature extractor, while only the new 10-class head learns. The option saying nothing trains is wrong because the head must still learn, which is the whole point of fitting the new classes.",
+   "interview_tip": "Frame freezing as a fast, overfit-resistant baseline with an accuracy ceiling."
+  },
+  {
+   "id": "q3",
+   "topic": "dataset",
+   "difficulty": "medium",
+   "question": "The baseline uses a random 80/20 split with seed 42. Why fix the seed?",
+   "options": [
+    "It guarantees the classes are perfectly balanced in each split",
+    "It improves validation accuracy by choosing easier test images",
+    "It makes the split reproducible so results are comparable across runs",
+    "It prevents the model from overfitting the training set"
+   ],
+   "answer": 2,
+   "explanation": "A fixed seed makes random_split deterministic, so the same images land on the same side every run and experiments stay comparable. It does nothing for class balance (that needs stratification) and does not reduce overfitting; the seed only controls reproducibility, which is why those distractors are wrong.",
+   "interview_tip": "Mention stratification as the natural upgrade for preserving class proportions."
+  },
+  {
+   "id": "q4",
+   "topic": "cnn",
+   "difficulty": "medium",
+   "question": "Why are CNNs well suited to the 64x64 satellite patches here?",
+   "options": [
+    "They treat every pixel as independent, maximizing flexibility",
+    "They exploit local pixel structure and translation invariance with few parameters",
+    "They require less data than any other model regardless of task",
+    "They remove the need for a train/validation split"
+   ],
+   "answer": 1,
+   "explanation": "CNNs slide filters that detect local patterns and reuse them anywhere in the image (translation invariance), so a 'forest texture' detector works in any corner with far fewer parameters than treating pixels independently. The independent-pixel option is the opposite of how convolutions work, making it the trap answer.",
+   "interview_tip": "Say 'nearby pixels are related and a pattern means the same thing wherever it appears.'"
+  },
+  {
+   "id": "q5",
+   "topic": "cnn",
+   "difficulty": "medium",
+   "question": "What problem do ResNet's residual (skip) connections solve?",
+   "options": [
+    "They shrink the model so it fits on a CPU",
+    "They add dropout automatically to prevent overfitting",
+    "They give gradients a shortcut so very deep networks train reliably",
+    "They convert logits into probabilities at the output"
+   ],
+   "answer": 2,
+   "explanation": "Skip connections let a block learn only the residual and give gradients a clean highway back to early layers, fixing the degradation and vanishing-gradient problems of very deep plain networks. The softmax option is wrong because turning logits into probabilities is done by softmax, not skip connections.",
+   "interview_tip": "One-liner: 'skip connections let you train very deep networks by giving gradients a shortcut.'"
+  },
+  {
+   "id": "q6",
+   "topic": "training",
+   "difficulty": "medium",
+   "question": "Why is CrossEntropyLoss the right loss for this task?",
+   "options": [
+    "It is the standard loss for multi-class single-label classification",
+    "It is designed for regression on continuous land-cover percentages",
+    "It is used for multi-label problems where a patch has several labels",
+    "It maximizes IoU for pixel-level segmentation"
+   ],
+   "answer": 0,
+   "explanation": "Cross-entropy measures how far the predicted probability for the true class is from 1.0 and is the standard for multi-class single-label classification, combining softmax and the loss in one stable step. The regression and multi-label options describe different problem types, and IoU is a segmentation metric, not a classification loss.",
+   "interview_tip": "Note that PyTorch CrossEntropyLoss expects raw logits, not softmax outputs."
+  },
+  {
+   "id": "q7",
+   "topic": "training",
+   "difficulty": "medium",
+   "question": "The baseline trains only 3 epochs on CPU and still converges. Why so few?",
+   "options": [
+    "Because EuroSAT is too small to support more than 3 epochs",
+    "Because Adam disables learning after the third epoch",
+    "Because only a tiny head trains on a frozen backbone, so it converges fast",
+    "Because more epochs always reduce validation accuracy"
+   ],
+   "answer": 2,
+   "explanation": "With the backbone frozen, only the small 10-class head has trainable weights, so there is very little to fit and the model converges in a handful of epochs. The dataset size does not cap epochs and Adam does not stop learning; the speed comes from the small number of trainable parameters.",
+   "interview_tip": "Pair this with 'watch the validation curve and stop when it plateaus.'"
+  },
+  {
+   "id": "q8",
+   "topic": "metrics",
+   "difficulty": "medium",
+   "question": "Validation accuracy is 85.1% with kappa 0.834. What does the confusion matrix add?",
+   "options": [
+    "It corrects accuracy for chance agreement between classes",
+    "It shows exactly which classes get confused, e.g. River predicted as Highway",
+    "It guarantees the random split contained no spatial leakage",
+    "It reports a single summary number that replaces accuracy"
+   ],
+   "answer": 1,
+   "explanation": "A confusion matrix is a 10x10 table whose off-diagonal cells reveal which specific classes are mixed up, such as this project's top confusion of River being predicted as Highway 81 times. Correcting for chance is what kappa does, not the matrix, which is why that option is the tempting but wrong choice.",
+   "interview_tip": "Say you 'read the off-diagonal' to decide what to fix next."
+  },
+  {
+   "id": "q9",
+   "topic": "metrics",
+   "difficulty": "medium",
+   "question": "Why report Cohen's kappa (0.834) alongside the 85.1% accuracy?",
+   "options": [
+    "Kappa measures the spatial distance between train and test patches",
+    "Kappa is always higher than accuracy and looks more impressive",
+    "Kappa adjusts agreement for what you'd get by chance given class frequencies",
+    "Kappa counts only the diagonal of the confusion matrix"
+   ],
+   "answer": 2,
+   "explanation": "Kappa = (observed accuracy - expected-by-chance accuracy) / (1 - expected-by-chance accuracy), so it strips out the agreement you would get just by guessing according to class frequencies. It is not necessarily higher than accuracy and has nothing to do with spatial distance, making those distractors wrong.",
+   "interview_tip": "Reporting kappa signals you understand metrics, not just headline numbers."
+  },
+  {
+   "id": "q10",
+   "topic": "spatial",
+   "difficulty": "medium",
+   "question": "What is spatial autocorrelation and why does it break a random split?",
+   "options": [
+    "Pixels within one patch are correlated, so 64x64 is too small",
+    "Nearby patches tend to be similar, so neighbors aren't independent samples",
+    "Classes are imbalanced, so accuracy overstates rare classes",
+    "Adam correlates gradients across batches, inflating accuracy"
+   ],
+   "answer": 1,
+   "explanation": "Spatial autocorrelation means things near each other on the map tend to be similar, so neighboring patches are not independent and a random split scatters near-twins across train and test. Class imbalance is a separate issue handled by kappa, so that option, while real, does not describe autocorrelation.",
+   "interview_tip": "Drop the phrase 'the IID assumption is violated; spatial samples are not independent.'"
+  },
+  {
+   "id": "q11",
+   "topic": "training",
+   "difficulty": "hard",
+   "question": "Why not train ResNet18 from scratch on EuroSAT instead of using pretrained weights?",
+   "options": [
+    "From-scratch always beats transfer learning given enough epochs",
+    "Random init breaks the skip connections in ResNet18",
+    "27k images is far less than ImageNet's ~1.2M, so it overfits and trains slowly",
+    "PyTorch cannot initialize ResNet18 without pretrained weights"
+   ],
+   "answer": 2,
+   "explanation": "Deep CNNs are data-hungry and ImageNet has roughly 45x more images than EuroSAT's 27k, so from-scratch models tend to overfit or underperform and take far longer to train, which is painful on CPU. The 'always beats' claim is false; from-scratch only wins with very large domain-specific data or images unlike natural photos.",
+   "interview_tip": "Note from-scratch makes sense only with huge domain data or non-photographic imagery."
+  },
+  {
+   "id": "q12",
+   "topic": "spatial",
+   "difficulty": "hard",
+   "question": "Why might the 85.1% random-split accuracy be inflated, and how does spatial CV help?",
+   "options": [
+    "It is inflated by too few epochs; spatial CV adds training passes",
+    "Random split leaks near-duplicate neighbors; spatial CV splits by location",
+    "It is inflated by Adam's learning rate; spatial CV lowers the rate",
+    "It is inflated by RGB normalization; spatial CV uses raw pixels"
+   ],
+   "answer": 1,
+   "explanation": "A random split scatters spatially adjacent, near-duplicate patches across train and test, so the model scores high by recognizing near-twins rather than generalizing. Spatial cross-validation groups patches into geographic blocks so each block goes entirely to train or test, removing the leakage and yielding a lower but honest number.",
+   "interview_tip": "Say the honest, lower spatial-CV number is the one worth optimizing and reporting."
+  },
+  {
+   "id": "q13",
+   "topic": "metrics",
+   "difficulty": "hard",
+   "question": "Precisely, what does kappa correct for that raw accuracy ignores?",
+   "options": [
+    "It corrects for spatial leakage between train and test patches",
+    "It corrects for the chance agreement expected from class frequencies",
+    "It corrects for the learning rate being too high during training",
+    "It corrects for the 64x64 patches losing fine spatial detail"
+   ],
+   "answer": 1,
+   "explanation": "Kappa subtracts the chance-agreement baseline you'd get by guessing according to how frequent each class is, via (observed - expected) / (1 - expected). It does not address spatial leakage, which is fixed by spatial cross-validation, so that closely-related option is the trap here.",
+   "interview_tip": "Keep accuracy, kappa, and spatial CV as three distinct tools for three distinct problems."
+  },
+  {
+   "id": "q14",
+   "topic": "transfer",
+   "difficulty": "hard",
+   "question": "What happens if the input normalization stats don't match ImageNet's expected values?",
+   "options": [
+    "Nothing changes because the frozen backbone is robust to input scale",
+    "Training crashes immediately with a tensor shape error",
+    "The frozen pretrained features misfire because inputs are out of expected range",
+    "Accuracy improves since the head adapts to any normalization"
+   ],
+   "answer": 2,
+   "explanation": "The frozen ImageNet backbone expects pixels scaled and shifted to the same range it was trained on, so wrong Normalize stats push inputs out of distribution and the fixed features misfire, degrading accuracy. It is not a shape error and the tiny frozen-baseline head cannot fully compensate, so the 'robust' and 'improves' options are wrong.",
+   "interview_tip": "Stress that preprocessing must match pretraining whenever you reuse frozen features."
+  },
+  {
+   "id": "q15",
+   "topic": "transfer",
+   "difficulty": "medium",
+   "question": "In Phase C we fine-tuned with backbone lr=1e-4 but head lr=1e-3. Why the difference?",
+   "options": [
+    "The head is larger so it needs a smaller effective step",
+    "Pretrained backbone knowledge is valuable \u2014 small steps protect it, while the random-init head needs to learn fast",
+    "Lower learning rates always work better for convolutional layers",
+    "It saves CPU time during the backward pass"
+   ],
+   "answer": 1,
+   "explanation": "Discriminative learning rates protect pretrained ImageNet features from being destroyed early (catastrophic forgetting) while letting the fresh head learn quickly. Option D is tempting but learning-rate size doesn't change compute cost.",
+   "interview_tip": "Name the term: 'discriminative learning rates'."
+  },
+  {
+   "id": "q16",
+   "topic": "spatial",
+   "difficulty": "hard",
+   "question": "Frozen backbone showed NO random-vs-spatial gap (\u22120.4%), but full fine-tuning showed +0.7%. What's the best interpretation?",
+   "options": [
+    "Fine-tuning is worse and should be avoided",
+    "Random noise \u2014 the numbers mean nothing",
+    "Leakage requires memorization capacity: with 11.2M trainable params the model can start recognizing places, inflating random-split scores slightly",
+    "The spatial split was built incorrectly in Phase C"
+   ],
+   "answer": 2,
+   "explanation": "This was a predicted result: Phase B hypothesized the 5,130-param head couldn't memorize places; giving the model capacity reopened a small gap. Option B is tempting since 0.7% is small \u2014 but the DIRECTION matched a pre-registered prediction, which is what gives it evidential weight.",
+   "interview_tip": "Pre-registered prediction + confirmation beats any single number."
+  },
+  {
+   "id": "q17",
+   "topic": "cnn",
+   "difficulty": "medium",
+   "question": "How does a Vision Transformer process our 64\u00d764 patch differently from a CNN?",
+   "options": [
+    "It uses bigger convolutional filters across the whole image",
+    "It cuts the image into 16 tiles and lets every tile attend to every other tile from the first layer",
+    "It processes the image one pixel at a time in sequence",
+    "It requires the image to be resized to 224\u00d7224 first"
+   ],
+   "answer": 1,
+   "explanation": "ViT tokenizes the image into patches and applies self-attention \u2014 global context immediately, vs a CNN's local-windows-first approach. Option D is tempting (224 is the pretraining size) but position-embedding interpolation let ours run at native 64px.",
+   "interview_tip": "Bonus point: mention pos-embed interpolation for non-standard input sizes."
+  },
+  {
+   "id": "q18",
+   "topic": "metrics",
+   "difficulty": "hard",
+   "question": "Our CNN and ViT both score ~0.85 IoU on Pasture but ~0.97 on Residential. What does per-class IoU reveal that overall accuracy hides?",
+   "options": [
+    "That the models were trained on different data",
+    "Which classes drag performance down \u2014 both architectures confuse vegetation look-alikes, pointing to a data/feature limit, not a model limit",
+    "That IoU is a buggy metric for classification",
+    "That Pasture has too few validation images to measure"
+   ],
+   "answer": 1,
+   "explanation": "When two very different architectures fail on the SAME classes, the bottleneck is likely the information in the data (vegetation classes look alike at 10m resolution), not the architecture. That insight directs the next investment toward better features (e.g. multispectral bands), not bigger models.",
+   "interview_tip": "'Same failures across architectures = data problem' is a senior-level diagnosis."
+  }
+ ]
 }

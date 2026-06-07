@@ -56,7 +56,7 @@ Written as verifiable end-states: each condition is binary-checkable — a file 
 **Learn conditions:**
 - [x] LEARNING.md Layer 5 (Tobler's law → leakage → fold design → null-result interpretation)
 - [x] Tutor KB entries: spatial autocorrelation, k-fold CV, GeoTIFF coordinates (11 total)
-- [ ] **Quiz gate (Srikavya's move):** score 12+/14 on the 🎯 Quiz tab, and explain unaided: (1) why random splits *can* flatter satellite models, (2) what her measured gap was and why it was null, (3) how the folds were built
+- [ ] **Quiz gate (Srikavya's move):** score 85% on the 🎯 Quiz tab, and explain unaided: (1) why random splits *can* flatter satellite models, (2) what her measured gap was and why it was null, (3) how the folds were built
 
 ### ⬜ Phase C — Scale & compare
 
@@ -67,14 +67,14 @@ Written as verifiable end-states: each condition is binary-checkable — a file 
 - [x] CPU wall-clock documented: ViT 40s/epoch, CNN 230s/epoch
 
 **Learn conditions:**
-- [ ] LEARNING.md: fine-tuning vs feature extraction; attention/ViT in one intuition-first section
-- [ ] Quiz gate: explain the frozen→fine-tuned→transformer progression and when each wins
+- [x] LEARNING.md Layer 6: fine-tuning vs feature extraction; attention/ViT intuition-first; Phase C story
+- [ ] Quiz gate (Srikavya): 85% on the quiz (now 18 questions incl. Phase C) + explain the progression unaided
 
 ### ⬜ Phase D — Publish
 
 **Build conditions:**
 - [ ] GitHub repo public, metrics-first README leading with the spatial-CV finding
-- [ ] Short write-up (blog post or README essay): "My 85% was lying to me — by exactly N points"
+- [x] Write-up: README opens with "The story" essay (suspicion → null → capacity confirmation → architecture verdict)
 - [ ] Clean `git log` telling the project story
 
 **Learn conditions:**

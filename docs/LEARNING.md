@@ -86,7 +86,20 @@ Same architecture, epochs, learning rate, code path. Only the split differs — 
 
 > "I hypothesized spatial leakage, recovered all 27k patch coordinates from GeoTIFF metadata, held out whole 50km blocks — and found no gap with a frozen backbone. My hypothesis is that leakage requires memorization capacity, which is exactly what Phase C tests by unfreezing the network."
 
+## Layer 6 — Phase C: Capacity, Fine-Tuning, and the Transformer Showdown
+
+### Fine-tuning vs feature extraction (what we actually changed)
+Phase A treated ResNet18 as a **fixed feature extractor**: frozen backbone, only the 5,130-parameter head learned. Phase C **fine-tuned**: every one of the 11.2M parameters could update. The crucial trick is **discriminative learning rates** — the pretrained backbone gets a gentle 1e-4 (nudge, don't bulldoze, the ImageNet knowledge) while the fresh head gets the full 1e-3. Result: **85.2% → 96.4%** (+11 points). Why so big? The frozen ImageNet features were tuned for cats and cars; letting them adapt to satellite textures (field grids, canopy speckle) unlocks what the features *could* be.
+
+### The capacity experiment paid off
+Phase B's null result predicted: *leakage needs memorization capacity*. Phase C tested it — identical splits, identical recipe, only the trainable surface changed. The random-vs-spatial gap moved from **−0.4% (frozen) to +0.7% (fine-tuned)**: a small leakage signal appeared exactly when capacity arrived. Prediction → test → confirmation (modest, honestly sized). Your honest number on new geography: **95.8%**.
+
+### Attention and ViT, intuition first
+A CNN looks through small sliding windows — local first, global only after many layers. A **Vision Transformer** cuts the image into patches (our 64px patch → sixteen 16×16 tiles), turns each into a token, and lets **every tile look at every other tile immediately** ("attention" = each tile computes how much every other tile matters to it). Global context from layer one. Our ViT-tiny ran at native 64px (position embeddings interpolate — a torchgeo-era trick worth mentioning), with **half the CNN's parameters**, and finished a **photo finish: 96.1% vs 96.3%** spatial. Per-class IoU split 6-4 CNN; ViT won Forest, HerbaceousVegetation, River, SeaLake. Both stumble on the same look-alikes (Pasture, PermanentCrop ≈ 0.85).
+
+> **The Layer-6 interview sentence:** "Fine-tuning gained 11 points but reopened a small leakage gap, exactly as our capacity hypothesis predicted — and a half-size ViT matched the CNN, with per-class IoU showing both fail on the same vegetation look-alikes."
+
 ## What's next (the project's remaining phases)
-- **Phase B**: ✅ done — see the 🧪 tab for your measured gap
-- **Phase C**: fine-tune vs frozen; CNN vs transformer; per-class IoU
-- **Phase D**: publish + mock-interview gate (12+/14 on the 🎯 Quiz tab)
+- **Phase B**: ✅ done — honest null, see the 🧪 tab
+- **Phase C**: ✅ done — capacity confirmed, transformer benchmarked, see the 🚀 tab
+- **Phase D**: publish + mock-interview gate (85% on the 🎯 Quiz tab)

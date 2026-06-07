@@ -216,6 +216,18 @@
    "topic": "Career & Interview",
    "q": "Which parts of the code should I be able to write from memory?",
    "a": "Be able to sketch the train.py core: the transforms (ToTensor then Normalize with ImageNet stats), build_model() loading resnet18 with frozen weights and a replaced nn.Linear(512, 10) head, and the training loop's three steps of guess, measure loss with CrossEntropyLoss, then adjust with the Adam optimizer. You should also be able to explain the validation loop using model.eval() and no_grad(). For Phase B, know how spatial_cv.py groups patches into 50km blocks and holds out whole blocks so neighbors cannot leak. If you can whiteboard the path from a satellite patch to a predicted label, you own the project."
+  },
+  {
+   "id": "g7",
+   "topic": "Geospatial & Phase B",
+   "q": "Phase C reopened the leakage gap \u2014 does that invalidate my 96%?",
+   "a": "No \u2014 it calibrates it. The fine-tuned model scores 96.4% on a random split and 95.8% on geographically-held-out blocks; the 0.7% difference is the (small) leakage tax. You report the 95.8% as your honest number for new geography. The deeper value is that the gap appeared exactly when the capacity hypothesis predicted it would, turning two experiments into one coherent scientific story."
+  },
+  {
+   "id": "m7",
+   "topic": "Model & CNN",
+   "q": "CNN or transformer \u2014 which should I say is better for this task?",
+   "a": "Say it was a photo finish and explain WHY that is the interesting answer: ResNet18 hit 96.3% and ViT-tiny 96.1% on identical spatial folds, with the ViT using half the parameters (5.5M vs 11.2M) and training about 5x faster per epoch on CPU. Per-class IoU split 6-4. Both architectures failed on the same vegetation look-alikes, which suggests the remaining errors are a data limitation (10m resolution RGB), not an architecture limitation."
   }
  ]
 }
