@@ -36,6 +36,7 @@
   <button class="mtab" data-panel="overview">🏠 Overview</button>
   <button class="mtab" data-panel="learn">📚 Learn</button>
   <button class="mtab" data-panel="phaseb">🧪 Phase B: The Honest Test</button>
+  <button class="mtab" data-panel="phasec">🚀 Phase C: The Sequel</button>
   <button class="mtab" data-panel="quiz">🎯 Quiz</button>
   <button class="mtab" data-panel="faq">❓ FAQ</button>
 </div>
@@ -43,19 +44,36 @@
 <!-- ════════════════ TAB: OVERVIEW ════════════════ -->
 <div class="panel" id="panel-overview">
 <div class="row">
-  <div class="card metric"><div class="big" style="color:var(--good)">85.1%</div><div class="dim">validation accuracy</div></div>
-  <div class="card metric"><div class="big" style="color:var(--accent)">0.834</div><div class="dim">Cohen's kappa</div></div>
-  <div class="card metric"><div class="big">27,000</div><div class="dim">satellite patches</div></div>
-  <div class="card metric"><div class="big">10</div><div class="dim">land-cover classes</div></div>
+  <div class="card metric" title="Share of the 5,400 never-seen validation images the frozen-backbone model classified correctly (random split)."><div class="big" style="color:var(--good)">85.1%</div><div class="dim">validation accuracy</div></div>
+  <div class="card metric" title="Cohen's kappa rescales accuracy so 0 = random guessing and 1 = perfect; 0.834 = 83.4% of the gap between chance and perfection closed."><div class="big" style="color:var(--accent)">0.834</div><div class="dim">Cohen's kappa</div></div>
+  <div class="card metric" title="Total 64x64 EuroSAT satellite image patches across train + validation in this project."><div class="big">27,000</div><div class="dim">satellite patches</div></div>
+  <div class="card metric" title="Number of land-cover categories the model chooses between, e.g. Forest, River, Residential, PermanentCrop."><div class="big">10</div><div class="dim">land-cover classes</div></div>
 </div>
 <div class="card">
   <h2 style="margin-top:6px">Project roadmap</h2>
   <div class="roadRow"><div class="roadDot" style="background:var(--good)"></div><b>Phase A — Baseline</b>&nbsp;<span class="dim">✅ done · frozen ResNet18, 85.1% / kappa 0.834</span></div>
-  <div class="roadRow"><div class="roadDot" style="background:var(--warn)"></div><b>Phase B — Spatial cross-validation</b>&nbsp;<span class="dim">🔄 results land in the Phase B tab automatically</span></div>
-  <div class="roadRow"><div class="roadDot" style="background:#3a4a5c"></div><b>Phase C — Fine-tune + transformer benchmark</b>&nbsp;<span class="dim">next</span></div>
+  <div class="roadRow"><div class="roadDot" style="background:var(--warn)"></div><b>Phase B — Spatial cross-validation</b>&nbsp;<span class="dim">🔄 results land in the <a href="#" data-panel="phaseb" style="color:var(--accent)">Phase B tab</a> automatically</span></div>
+  <div class="roadRow"><div class="roadDot" style="background:#3a4a5c"></div><b>Phase C — Fine-tune + transformer benchmark</b>&nbsp;<span class="dim">next — see the <a href="#" data-panel="phasec" style="color:var(--accent)">Phase C tab</a></span></div>
   <div class="roadRow"><div class="roadDot" style="background:#3a4a5c"></div><b>Phase D — Publish + mock-interview gate</b>&nbsp;<span class="dim">final</span></div>
   <p class="dim">Suggested path: 📚 Learn (all 6 sections) → ask the tutor anything unclear → 🧪 Phase B → 🎯 Quiz until you score 12+/14.</p>
-  <p>🐣 <b>Rusty on ML or starting fresh?</b> Read <a href="visual_guide_breakdown.html" style="color:var(--accent)">the plain-words breakdown</a> first — the whole project as an 8-step story, flashcards, and a no-jargon glossary.</p>
+  <p>🐣 <b>Rusty on ML or starting fresh?</b> Read <a href="visual_guide_breakdown.html" id="breakdownLink" style="color:var(--accent)">the plain-words breakdown</a> first — the whole project as an 8-step story, flashcards, and a no-jargon glossary.</p>
+</div>
+<div class="card" id="progressCard">
+  <h2 style="margin-top:6px">📊 My progress</h2>
+  <div id="progressBarTrack" style="height:8px;background:#243140;border-radius:6px;overflow:hidden;margin:6px 0 18px">
+    <div id="progressBarFill" style="height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--good));border-radius:6px;transition:width .35s"></div>
+  </div>
+  <div class="row" id="progressStats">
+    <div class="card metric" data-panel="learn" style="cursor:pointer" title="Distinct tabs you have opened, out of six: Overview, Learn, Phase B, Phase C, Quiz/FAQ, plus the plain-words breakdown page.">
+      <div class="big" id="statTabs" style="color:var(--accent)">0/6</div><div class="dim">tabs explored</div></div>
+    <div class="card metric" data-panel="quiz" style="cursor:pointer" title="Your best quiz score so far. The Phase B brief gate is 12 or more out of 14.">
+      <div class="big" id="statQuiz" style="color:var(--warn)">0/14 🔜</div><div class="dim">quiz best</div></div>
+    <div class="card metric" data-panel="overview" style="cursor:pointer" title="Whether you have opened the plain-words breakdown page (8-step story, flashcards, glossary) at least once.">
+      <div class="big" id="statBreakdown" style="color:var(--dim)">🔜</div><div class="dim">flashcards page</div></div>
+    <div class="card metric" data-panel="faq" style="cursor:pointer" title="How many questions you have asked the AI tutor in the sidebar so far.">
+      <div class="big" id="statTutor" style="color:var(--good)">0</div><div class="dim">tutor questions</div></div>
+  </div>
+  <p class="dim" id="progressNote" style="text-align:center;margin-top:14px">Explore every tab, ask the tutor, and clear the quiz to fill the bar.</p>
 </div>
 </div>
 
@@ -142,6 +160,23 @@
   <div class="takeaway"><b>Why this matters in interviews:</b> anyone can report high accuracy. Reporting <i>how much of it was a leakage illusion</i> — with the experiment to prove it — is what separates "I trained a model" from "I evaluate models honestly."</div>
 </div>
 </div><!-- /panel-phaseb -->
+
+<!-- ════════════════ TAB: PHASE C ════════════════ -->
+<div class="panel" id="panel-phasec">
+<div id="phasec">
+  <h2 style="margin-top:10px">🚀 Phase C: did capacity hide the leakage?</h2>
+  <div class="card">
+    <p><b>The cliffhanger from Phase B:</b> with a <b>frozen</b> backbone, the spatial test found <i>no</i> leakage gap — random scored <b>85.2%</b>, spatial <b>85.6%</b>, basically a tie. That was suspicious in a good way.</p>
+    <p><b>The hypothesis:</b> leakage needs <i>memorisation capacity</i>. In Phase B only <b>5,130 of 11.2M parameters</b> trained — the tiny head simply can't memorise specific farms, so there was nothing to leak. A model that <i>can</i> memorise places should show the gap.</p>
+    <p><b>The experiment:</b> Phase C unfreezes <b>all 11.2M parameters</b> (full fine-tuning, with a gentler learning rate on the pretrained layers so we don't destroy the ImageNet features), then re-runs the <i>identical</i> random-vs-spatial split — same data, same epochs, only the trainable surface changes.</p>
+    <div class="takeaway"><b>Prediction to test:</b> if the capacity hypothesis is right, the gap should <b>REOPEN</b> — the random split will pull ahead of the honest spatial split once the network has enough capacity to recognise places.</div>
+    <div class="row" id="ftCards"><p class="dim">⏳ Fine-tuning experiment runs on the CPU… this tab updates automatically when results land in <code>outputs/finetune_gap.json</code>. Refresh in a few minutes.</p></div>
+    <div id="ftStory"></div>
+    <img id="ftCompare" alt="" style="display:none">
+  </div>
+  <div class="takeaway"><b>Why this matters in interviews:</b> running a second experiment <i>because the first produced a null result</i> — with a falsifiable hypothesis about <i>why</i> — is exactly the scientific instinct senior reviewers look for. The number you report is the honest spatial one, whichever way it lands.</div>
+</div>
+</div><!-- /panel-phasec -->
 
 <!-- ════════════════ TAB: QUIZ ════════════════ -->
 <div class="panel" id="panel-quiz">
@@ -385,7 +420,8 @@ document.getElementById('spatialBtn').addEventListener('click', () => {
   /* ---- main tabs ---- */
   #mainTabs { display:flex; gap:8px; margin:18px 0 6px; border-bottom:2px solid #2a3542; flex-wrap:wrap; }
   .mtab { background:none; color:var(--dim); border:none; border-bottom:3px solid transparent;
-    padding:10px 18px; font-size:1.02em; font-weight:600; cursor:pointer; border-radius:8px 8px 0 0; }
+    padding:10px 18px; font-size:1.02em; font-weight:600; cursor:pointer; border-radius:8px 8px 0 0;
+    transition:background .15s; }
   .mtab:hover { color:var(--ink); background:#1a2129; }
   .mtab.active { color:var(--accent); border-bottom-color:var(--accent); }
   .panel { display:none; } .panel.active { display:block; }
@@ -424,7 +460,8 @@ then visit <a href="http://localhost:8787/visual_guide.html" style="color:#ffcc8
 <button id="tutorToggle" title="AI Tutor">💬</button>
 <div id="tutorPanel">
   <div id="tutorHead"><h3>🎓 AI Tutor — ask me anything</h3>
-    <span class="dim" style="font-size:.78em">Reference sections with the chips. New concepts become tabs ↓</span></div>
+    <span class="dim" style="font-size:.78em">Reference sections with the chips. New concepts become tabs ↓</span>
+    <span class="dim" style="font-size:.78em;display:block;margin-top:3px">Instant for 15 known concepts · ~90s when Claude draws fresh</span></div>
   <div id="tabBar"></div>
   <div id="chatLog"></div>
   <div id="chips"></div>
@@ -531,13 +568,60 @@ then visit <a href="http://localhost:8787/visual_guide.html" style="color:#ffcc8
 
   // ---- tab switching, persisted ----
   const tabs = document.querySelectorAll('.mtab');
+  const TRACKED_TABS = ['overview', 'learn', 'phaseb', 'phasec', 'quiz', 'faq'];
+  // 'breakdown' is the sixth conceptual tab (an external page); tracked via breakdownSeen.
+  function visitedSet() {
+    try { return new Set(JSON.parse(localStorage.getItem('visitedTabs') || '[]')); }
+    catch (e) { return new Set(); }
+  }
+  function markVisited(name) {
+    const s = visitedSet();
+    if (!s.has(name)) { s.add(name); localStorage.setItem('visitedTabs', JSON.stringify([...s])); }
+  }
   function show(name) {
     tabs.forEach(b => b.classList.toggle('active', b.dataset.panel === name));
     document.querySelectorAll('.panel').forEach(p =>
       p.classList.toggle('active', p.id === 'panel-' + name));
     localStorage.setItem('activeTab', name);
+    if (TRACKED_TABS.includes(name)) markVisited(name);
+    renderProgress();
   }
-  tabs.forEach(b => b.addEventListener('click', () => show(b.dataset.panel)));
+  // delegate clicks to ANY [data-panel] element (main tabs + progress stat cards + roadmap links)
+  document.querySelectorAll('[data-panel]').forEach(el =>
+    el.addEventListener('click', e => { e.preventDefault(); show(el.dataset.panel); }));
+
+  // ---- My-progress dashboard (Overview) ----
+  function tutorQuestionCount() {
+    try { return JSON.parse(localStorage.getItem('tutorHistory') || '[]')
+            .filter(m => m && m.role === 'user').length; }
+    catch (e) { return 0; }
+  }
+  function renderProgress() {
+    if (!$('progressCard')) return;
+    // breakdown counts as one of the six tabs once the link has been clicked
+    const breakdownSeen = localStorage.getItem('breakdownSeen') === '1';
+    const tabCount = Math.min(6, visitedSet().size + (breakdownSeen ? 1 : 0));
+    const quizBest = +localStorage.getItem('quizBest') || 0;
+    const questions = tutorQuestionCount();
+
+    $('statTabs').textContent = tabCount + '/6';
+    const quizPass = quizBest >= 12;
+    $('statQuiz').textContent = quizBest + '/14 ' + (quizPass ? '✅' : '🔜');
+    $('statQuiz').style.color = quizPass ? 'var(--good)' : 'var(--warn)';
+    $('statBreakdown').textContent = breakdownSeen ? '✅' : '🔜';
+    $('statBreakdown').style.color = breakdownSeen ? 'var(--good)' : 'var(--dim)';
+    $('statTutor').textContent = questions;
+
+    // average of four completion fractions
+    const frac = (tabCount / 6 + Math.min(quizBest, 14) / 14 +
+                  (breakdownSeen ? 1 : 0) + Math.min(questions, 10) / 10) / 4;
+    $('progressBarFill').style.width = (frac * 100).toFixed(0) + '%';
+  }
+  // count the flashcards/breakdown page as visited when its link is clicked
+  if ($('breakdownLink'))
+    $('breakdownLink').addEventListener('click', () => {
+      localStorage.setItem('breakdownSeen', '1'); renderProgress(); });
+
   show(localStorage.getItem('activeTab') || 'overview');
 
   // ---- Phase B: self-updating results ----
@@ -561,6 +645,32 @@ then visit <a href="http://localhost:8787/visual_guide.html" style="color:#ffcc8
     } catch (e) { /* file:// or server down — placeholder stays */ }
   }
   loadGap();
+
+  // ---- Phase C: self-updating fine-tuning results ----
+  async function loadFt() {
+    try {
+      const r = await fetch('/finetune_gap.json');
+      if (!r.ok) return;
+      const g = await r.json();
+      const pct = v => (v * 100).toFixed(1) + '%';
+      const meaningful = g.gap_accuracy > 0.01;   // >1 point = the gap reopened
+      const FROZEN_REF = (g.frozen_reference && g.frozen_reference.spatial_accuracy) || 0.8561;
+      const ftImprove = g.spatial.accuracy - FROZEN_REF;   // fine-tuned spatial vs frozen 85.61%
+      $('ftCards').innerHTML =
+        `<div class="card metric"><div class="gapNum" style="color:var(--accent)">${pct(g.random.accuracy)}</div><div class="dim">fine-tuned random split</div></div>
+         <div class="card metric"><div class="gapNum" style="color:var(--good)">${pct(g.spatial.accuracy)}</div><div class="dim">fine-tuned spatial (honest test)</div></div>
+         <div class="card metric"><div class="gapNum" style="color:${meaningful ? 'var(--bad)' : 'var(--good)'}">${(g.gap_accuracy * 100).toFixed(1)}%</div><div class="dim">the gap</div></div>`;
+      const improveTxt = (ftImprove >= 0 ? '+' : '') + (ftImprove * 100).toFixed(1) +
+        ' points vs the frozen-backbone spatial baseline (' + pct(FROZEN_REF) + ')';
+      $('ftStory').innerHTML = meaningful
+        ? `<p><b>The gap REOPENED — capacity hypothesis CONFIRMED.</b> With all 11.2M parameters trainable, the random split (${pct(g.random.accuracy)}) now beats the honest spatial split (${pct(g.spatial.accuracy)}) by <b>${pct(g.gap_accuracy)}</b>. Fine-tuning gained accuracy (${improveTxt}), but that ${pct(g.gap_accuracy)} of the random-split score is a <b>leakage illusion</b> — the network is partly recognising places it memorised. <b>Report the spatial number: ${pct(g.spatial.accuracy)}.</b></p>
+           <p class="dim">${g.block_km}km blocks, ${g.epochs} epochs each, identical training — only the trainable surface changed (5,130 → 11.2M params).</p>`
+        : `<p><b>The gap stayed closed even at 11.2M parameters.</b> Full fine-tuning produced random ${pct(g.random.accuracy)} vs spatial ${pct(g.spatial.accuracy)} — a ${(g.gap_accuracy*100).toFixed(1)}% difference within run noise. EuroSAT's 10-class <i>texture</i> task appears robust to place-memorisation at ${g.block_km}km blocks; even a high-capacity model doesn't cheat by recognising specific farms. An honest result either way. Fine-tuning still moved the spatial number ${improveTxt}.</p>
+           <p class="dim">${g.block_km}km blocks, ${g.epochs} epochs each, identical training. Honest caveat: single holdout per condition, not full k-fold.</p>`;
+      $('ftCompare').src = '/finetune_compare.png'; $('ftCompare').style.display = 'block';
+    } catch (e) { /* file:// or server down — placeholder stays */ }
+  }
+  loadFt();
 
   // ---- Quiz ----
   let bank = null, graded = false;
