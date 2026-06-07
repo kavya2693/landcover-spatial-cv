@@ -73,9 +73,9 @@ Written as verifiable end-states: each condition is binary-checkable — a file 
 ### ⬜ Phase D — Publish
 
 **Build conditions:**
-- [ ] GitHub repo public, metrics-first README leading with the spatial-CV finding
+- [x] GitHub repo public: https://github.com/kavya2693/landcover-spatial-cv (2026-06-07)
 - [x] Write-up: README opens with "The story" essay (suspicion → null → capacity confirmation → architecture verdict)
-- [ ] Clean `git log` telling the project story
+- [x] Clean git log: 16 commits, phase-by-phase story
 
 **Learn conditions:**
 - [ ] **Mock interview gate:** 30-second pitch + 10 random questions from INTERVIEW_QA.md answered unaided, including 2 gotchas
