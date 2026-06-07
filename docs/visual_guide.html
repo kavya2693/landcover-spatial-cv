@@ -411,6 +411,11 @@ document.getElementById('spatialBtn').addEventListener('click', () => {
   .chip { background:#243140; border-radius:14px; padding:2px 10px; font-size:.75em; cursor:pointer; color:var(--dim); }
   .chip:hover { color:var(--ink); background:#2e4156; }
   #askRow { display:flex; gap:8px; padding:10px 14px 16px; }
+  #micBtn { background:#243140; color:var(--ink); min-width:42px; }
+  #micBtn.listening { background:var(--bad); animation:micPulse 1.1s infinite; }
+  @keyframes micPulse { 0%,100%{filter:brightness(1)} 50%{filter:brightness(1.45)} }
+  #voiceOutBtn { background:#243140; color:var(--dim); min-width:42px; }
+  #voiceOutBtn.on { background:#1d3a24; color:var(--good); }
   #askInput { flex:1; background:#0f1419; border:1px solid #2a3542; border-radius:10px;
     color:var(--ink); padding:10px 12px; font-size:.92em; }
   #askInput:focus { outline:none; border-color:var(--accent); }
@@ -473,7 +478,9 @@ then visit <a href="http://localhost:8787/visual_guide.html" style="color:#ffcc8
   <div id="chatLog"></div>
   <div id="chips"></div>
   <div id="askRow">
+    <button id="micBtn" title="Hold a question? Just talk — tap, speak, it sends itself">🎤</button>
     <input id="askInput" placeholder="e.g. why did Image 5 confuse rivers with highways?">
+    <button id="voiceOutBtn" title="Speak answers aloud">🔊</button>
     <button id="askBtn">➤</button>
   </div>
 </div>
@@ -551,6 +558,7 @@ then visit <a href="http://localhost:8787/visual_guide.html" style="color:#ffcc8
       t.remove();
       const bm = { role: 'bot', text: a.answer, visual: a.visual_html, source: a.source };
       history.push(bm); history = history.slice(-30); save('tutorHistory', history); bubble(bm);
+      if (window.speakAnswer) window.speakAnswer(a.answer);   // voice output if enabled
       if (a.is_extension && a.tab_title && a.visual_html && !tabs.some(x => x.title === a.tab_title)) {
         tabs.push({ title: a.tab_title, answer: a.answer, visual: a.visual_html });
         save('tutorTabs', tabs); renderTabs();
@@ -562,6 +570,54 @@ then visit <a href="http://localhost:8787/visual_guide.html" style="color:#ffcc8
   }
   $('askBtn').addEventListener('click', ask);
   $('askInput').addEventListener('keydown', e => { if (e.key === 'Enter') ask(); });
+
+  // ---- VOICE INPUT: talk instead of type (browser-native, no keys) ----
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let rec = null, listening = false;
+  if (!SR) {
+    $('micBtn').disabled = true;
+    $('micBtn').title = 'Voice input needs Chrome/Edge/Safari';
+  }
+  $('micBtn').addEventListener('click', () => {
+    if (!SR) return;
+    if (listening) { rec.stop(); return; }          // tap again to cancel
+    rec = new SR();
+    rec.lang = 'en-US'; rec.interimResults = true; rec.continuous = false;
+    listening = true; $('micBtn').classList.add('listening');
+    $('askInput').placeholder = '🎤 listening… speak your question';
+    let finalText = '';
+    rec.onresult = e => {
+      let interim = '';
+      for (const r of e.results) (r.isFinal ? finalText += r[0].transcript : interim += r[0].transcript);
+      $('askInput').value = (finalText + interim).trim();   // live dictation
+    };
+    rec.onend = () => {
+      listening = false; $('micBtn').classList.remove('listening');
+      $('askInput').placeholder = 'e.g. why did Image 5 confuse rivers with highways?';
+      if (finalText.trim()) { $('askInput').value = finalText.trim(); ask(); }  // voice command: auto-send
+    };
+    rec.onerror = rec.onend;
+    rec.start();
+  });
+
+  // ---- VOICE OUTPUT: tutor reads answers aloud (toggle, persisted) ----
+  let voiceOut = localStorage.getItem('voiceOut') === '1';
+  const syncVoiceBtn = () => $('voiceOutBtn').classList.toggle('on', voiceOut);
+  syncVoiceBtn();
+  $('voiceOutBtn').addEventListener('click', () => {
+    voiceOut = !voiceOut; localStorage.setItem('voiceOut', voiceOut ? '1' : '0');
+    syncVoiceBtn();
+    if (!voiceOut) speechSynthesis.cancel();
+    else { const u = new SpeechSynthesisUtterance('Voice on. Ask me anything.'); speechSynthesis.speak(u); }
+  });
+  window.speakAnswer = text => {       // called from ask() after a bot reply
+    if (!voiceOut || !('speechSynthesis' in window)) return;
+    speechSynthesis.cancel();
+    const clean = text.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '').slice(0, 600);
+    const u = new SpeechSynthesisUtterance(clean);
+    u.rate = 1.05;
+    speechSynthesis.speak(u);
+  };
   $('tutorToggle').addEventListener('click', () => document.body.classList.toggle('tutor-open'));
   $('tabModal').addEventListener('click', e => { if (e.target === $('tabModal')) $('tabModal').classList.remove('open'); });
 
