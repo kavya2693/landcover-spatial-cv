@@ -6,10 +6,14 @@ Classifying 27,000 EuroSAT satellite patches into 10 land-cover classes (Forest,
 
 | Model | Split | Accuracy | Cohen's kappa |
 |---|---|---|---|
-| ResNet18 (frozen backbone, transfer learning, 3 epochs, CPU) | random 80/20 | **85.2%** | 0.835 |
-| ResNet18 (identical training) | **spatial 50km blocks** | **85.6%** | 0.838 |
+| ResNet18 frozen backbone (3 epochs, CPU) | random 80/20 | 85.2% | 0.835 |
+| ResNet18 frozen backbone (identical training) | **spatial 50km blocks** | 85.6% | 0.838 |
+| ResNet18 **full fine-tune** (discriminative LRs, 3 epochs, CPU) | random 80/20 | **96.4%** | 0.960 |
+| ResNet18 full fine-tune (identical training) | **spatial 50km blocks** | **95.8%** | 0.953 |
 
 Top confusions: River→Highway (81) — both linear features; PermanentCrop→HerbaceousVegetation (49) — similar vegetation texture at 10 m resolution.
+
+**Phase C finding (capacity experiment):** full fine-tuning lifted accuracy **+11 points** (85.2% → 96.4%) — and the random-vs-spatial gap moved from **−0.4% (frozen) to +0.7% (fine-tuned)**: a small leakage signal appeared exactly when memorization capacity was added, directionally consistent with the capacity hypothesis, though modest (below 1 point) at 50 km blocks. The honest headline number for new geography is **95.8%**.
 
 **Phase B finding (honest null result):** patch coordinates were recovered from EuroSAT's multispectral GeoTIFF metadata (tiepoint/scale/EPSG tags, parsed with `tifffile`), and whole 50 km blocks were held out so no neighbouring patch could leak across the split. The spatial score *matched* the random score (−0.4%, within noise): **no measurable spatial leakage in the frozen-backbone configuration** — consistent with the 5,130-parameter trainable head having little capacity to memorize places. Phase C tests whether full fine-tuning (11M parameters) reopens the gap. Caveat: single holdout per condition (CPU budget), not full GroupKFold.
 

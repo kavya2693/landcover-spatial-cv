@@ -61,7 +61,7 @@ Written as verifiable end-states: each condition is binary-checkable — a file 
 ### ⬜ Phase C — Scale & compare
 
 **Build conditions:**
-- [ ] Fine-tuned (unfrozen) ResNet vs frozen baseline — delta reported
+- [x] Fine-tuned (unfrozen) ResNet vs frozen baseline — delta reported (+11.2 pts: 85.2%→96.4% random, 85.6%→95.8% spatial; gap −0.4%→+0.7%, small leakage signal appeared with capacity — `outputs/finetune_gap.json`)
 - [ ] One transformer-family model (e.g. ViT via torchgeo) benchmarked under identical spatial folds
 - [ ] Per-class IoU/F1 table in README; CNN-vs-transformer verdict stated with numbers
 - [ ] Constraint: stays trainable on available hardware (CPU/Colab free tier) — document wall-clock

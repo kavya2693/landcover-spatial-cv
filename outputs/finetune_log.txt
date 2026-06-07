@@ -1,0 +1,34 @@
+Device: cpu
+Random split:
+  [finetune-random] epoch 1/3 (247s)
+  [finetune-random] epoch 2/3 (236s)
+  [finetune-random] epoch 3/3 (1672s)
+  random:  acc 0.9644  kappa 0.9604
+Spatial split:
+  spatial: 866 blocks total, 147 held out -> 5401 val images
+  [finetune-spatial] epoch 1/3 (238s)
+  [finetune-spatial] epoch 2/3 (230s)
+  [finetune-spatial] epoch 3/3 (231s)
+  spatial: acc 0.9578  kappa 0.9525
+  saved /Users/srikavya/Documents/ml-portfolio/project-1-landcover/outputs/finetune_compare.png
+{
+  "mode": "finetune",
+  "random": {
+    "accuracy": 0.9644,
+    "kappa": 0.9604
+  },
+  "spatial": {
+    "accuracy": 0.9578,
+    "kappa": 0.9525
+  },
+  "gap_accuracy": 0.0067,
+  "gap_kappa": 0.0079,
+  "epochs": 3,
+  "block_km": 50,
+  "frozen_reference": {
+    "random_accuracy": 0.8519,
+    "spatial_accuracy": 0.8561,
+    "gap_accuracy": -0.0043
+  },
+  "note": "full fine-tune, discriminative LRs (backbone 1e-4, head 1e-3); same splits as Phase B"
+}

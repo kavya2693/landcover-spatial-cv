@@ -1,0 +1,21 @@
+{
+  "mode": "finetune",
+  "random": {
+    "accuracy": 0.9644,
+    "kappa": 0.9604
+  },
+  "spatial": {
+    "accuracy": 0.9578,
+    "kappa": 0.9525
+  },
+  "gap_accuracy": 0.0067,
+  "gap_kappa": 0.0079,
+  "epochs": 3,
+  "block_km": 50,
+  "frozen_reference": {
+    "random_accuracy": 0.8519,
+    "spatial_accuracy": 0.8561,
+    "gap_accuracy": -0.0043
+  },
+  "note": "full fine-tune, discriminative LRs (backbone 1e-4, head 1e-3); same splits as Phase B"
+}
