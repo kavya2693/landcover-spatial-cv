@@ -174,6 +174,13 @@
     <div id="ftStory"></div>
     <img id="ftCompare" alt="" style="display:none">
   </div>
+  <div class="card" id="benchCard">
+    <h2 style="margin-top:6px">🤖 vs 🤖 CNN vs Transformer — the final Phase C benchmark</h2>
+    <p>Same seed, same spatial folds, same training recipe — only the architecture differs. The CNN (ResNet18, 11.2M params, local sliding filters) against a Vision Transformer (ViT-tiny, 5.5M params, every image patch attends to every other). Scored with <b>per-class IoU</b> — harsher than accuracy because it punishes both missed detections and false alarms.</p>
+    <div class="row" id="benchCards"><p class="dim">⏳ Benchmark training on the CPU… this section fills itself when <code>outputs/benchmark.json</code> lands.</p></div>
+    <div id="benchStory"></div>
+    <img id="benchCompare" alt="" style="display:none;max-width:100%;border-radius:10px;margin-top:10px">
+  </div>
   <div class="takeaway"><b>Why this matters in interviews:</b> running a second experiment <i>because the first produced a null result</i> — with a falsifiable hypothesis about <i>why</i> — is exactly the scientific instinct senior reviewers look for. The number you report is the honest spatial one, whichever way it lands.</div>
 </div>
 </div><!-- /panel-phasec -->
@@ -671,6 +678,28 @@ then visit <a href="http://localhost:8787/visual_guide.html" style="color:#ffcc8
     } catch (e) { /* file:// or server down — placeholder stays */ }
   }
   loadFt();
+
+  // ---- Phase C part 2: CNN vs Transformer benchmark (self-updating) ----
+  async function loadBench() {
+    try {
+      const r = await fetch('/benchmark.json');
+      if (!r.ok) return;
+      const b = await r.json();
+      const pct = v => (v * 100).toFixed(1) + '%';
+      const winner = b.cnn.spatial.accuracy >= b.vit.spatial.accuracy ? 'CNN' : 'Transformer';
+      $('benchCards').innerHTML =
+        `<div class="card metric"><div class="gapNum" style="color:var(--accent)">${pct(b.cnn.spatial.accuracy)}</div><div class="dim">CNN spatial (ResNet18)</div></div>
+         <div class="card metric"><div class="gapNum" style="color:var(--warn)">${pct(b.vit.spatial.accuracy)}</div><div class="dim">ViT spatial (5.5M params)</div></div>
+         <div class="card metric"><div class="gapNum" style="color:var(--good)">${winner}</div><div class="dim">wins on honest folds</div></div>`;
+      const iouRows = Object.keys(b.cnn.spatial_per_class_iou).map(c =>
+        `<tr><td style="text-align:left">${c}</td><td>${b.cnn.spatial_per_class_iou[c].toFixed(3)}</td><td>${b.vit.spatial_per_class_iou[c].toFixed(3)}</td></tr>`).join('');
+      $('benchStory').innerHTML =
+        `<p><b>The verdict:</b> on identical spatial folds the <b>${winner}</b> leads (CNN ${pct(b.cnn.spatial.accuracy)} vs ViT ${pct(b.vit.spatial.accuracy)}; kappa ${b.cnn.spatial.kappa} vs ${b.vit.spatial.kappa}). ViT's own random-vs-spatial gap: ${(b.vit.gap_accuracy*100).toFixed(1)}%.</p>
+         <table style="margin:10px 0"><tr><th style="text-align:left">Class</th><th>CNN IoU</th><th>ViT IoU</th></tr>${iouRows}</table>`;
+      $('benchCompare').src = '/benchmark_compare.png'; $('benchCompare').style.display = 'block';
+    } catch (e) { /* placeholder stays */ }
+  }
+  loadBench();
 
   // ---- Quiz ----
   let bank = null, graded = false;

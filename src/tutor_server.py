@@ -114,7 +114,9 @@ def apology() -> dict:
 RESULT_FILES = {"/spatial_gap.json": "application/json",
                 "/spatial_blocks.png": "image/png",
                 "/finetune_gap.json": "application/json",
-                "/finetune_compare.png": "image/png"}
+                "/finetune_compare.png": "image/png",
+                "/benchmark.json": "application/json",
+                "/benchmark_compare.png": "image/png"}
 
 
 class TutorHandler(SimpleHTTPRequestHandler):
