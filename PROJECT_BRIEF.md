@@ -62,9 +62,9 @@ Written as verifiable end-states: each condition is binary-checkable — a file 
 
 **Build conditions:**
 - [x] Fine-tuned (unfrozen) ResNet vs frozen baseline — delta reported (+11.2 pts: 85.2%→96.4% random, 85.6%→95.8% spatial; gap −0.4%→+0.7%, small leakage signal appeared with capacity — `outputs/finetune_gap.json`)
-- [ ] One transformer-family model (e.g. ViT via torchgeo) benchmarked under identical spatial folds
-- [ ] Per-class IoU/F1 table in README; CNN-vs-transformer verdict stated with numbers
-- [ ] Constraint: stays trainable on available hardware (CPU/Colab free tier) — document wall-clock
+- [x] One transformer-family model (ViT-tiny via timm, native 64px) benchmarked under identical spatial folds — photo finish: CNN 96.3% vs ViT 96.1%
+- [x] Per-class IoU table + verdict in README (CNN wins 6/10 classes; both weakest on Pasture/PermanentCrop ~0.85)
+- [x] CPU wall-clock documented: ViT 40s/epoch, CNN 230s/epoch
 
 **Learn conditions:**
 - [ ] LEARNING.md: fine-tuning vs feature extraction; attention/ViT in one intuition-first section

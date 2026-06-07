@@ -1,0 +1,71 @@
+Device: cpu
+  spatial: 866 blocks total, 147 held out -> 5401 val images
+ViT — random split:
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+  [vit-random] epoch 1/3 (52s)
+  [vit-random] epoch 2/3 (40s)
+  [vit-random] epoch 3/3 (40s)
+  vit random:  acc 0.9570  kappa 0.9522
+ViT — spatial split:
+  [vit-spatial] epoch 1/3 (41s)
+  [vit-spatial] epoch 2/3 (35s)
+  [vit-spatial] epoch 3/3 (38s)
+  vit spatial: acc 0.9611  kappa 0.9563
+CNN — spatial split:
+  [cnn-spatial] epoch 1/3 (249s)
+  [cnn-spatial] epoch 2/3 (238s)
+  [cnn-spatial] epoch 3/3 (230s)
+  cnn spatial: acc 0.9626  kappa 0.9579
+  saved /Users/srikavya/Documents/ml-portfolio/project-1-landcover/outputs/benchmark_compare.png
+{
+  "vit": {
+    "model": "vit_tiny_patch16_224@64px (5.5M params)",
+    "random": {
+      "accuracy": 0.957,
+      "kappa": 0.9522
+    },
+    "spatial": {
+      "accuracy": 0.9611,
+      "kappa": 0.9563
+    },
+    "gap_accuracy": -0.0041,
+    "spatial_per_class_iou": {
+      "AnnualCrop": 0.9294,
+      "Forest": 0.9599,
+      "HerbaceousVegetation": 0.9149,
+      "Highway": 0.8514,
+      "Industrial": 0.9493,
+      "Pasture": 0.8553,
+      "PermanentCrop": 0.8501,
+      "Residential": 0.9646,
+      "River": 0.9072,
+      "SeaLake": 0.9871
+    }
+  },
+  "cnn": {
+    "model": "resnet18 full fine-tune (11.2M params)",
+    "spatial": {
+      "accuracy": 0.9626,
+      "kappa": 0.9579
+    },
+    "spatial_per_class_iou": {
+      "AnnualCrop": 0.9452,
+      "Forest": 0.9325,
+      "HerbaceousVegetation": 0.8958,
+      "Highway": 0.8804,
+      "Industrial": 0.9593,
+      "Pasture": 0.8673,
+      "PermanentCrop": 0.879,
+      "Residential": 0.9722,
+      "River": 0.9005,
+      "SeaLake": 0.977
+    },
+    "reference_from_phase_c": {
+      "random_accuracy": 0.9644,
+      "spatial_accuracy": 0.9578
+    }
+  },
+  "epochs": 3,
+  "block_km": 50,
+  "note": "identical seed-42 spatial folds; ViT at native 64px via pos-embed interpolation"
+}

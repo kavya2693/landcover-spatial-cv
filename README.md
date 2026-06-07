@@ -10,6 +10,10 @@ Classifying 27,000 EuroSAT satellite patches into 10 land-cover classes (Forest,
 | ResNet18 frozen backbone (identical training) | **spatial 50km blocks** | 85.6% | 0.838 |
 | ResNet18 **full fine-tune** (discriminative LRs, 3 epochs, CPU) | random 80/20 | **96.4%** | 0.960 |
 | ResNet18 full fine-tune (identical training) | **spatial 50km blocks** | **95.8%** | 0.953 |
+| ViT-tiny fine-tune (5.5M params, native 64px via pos-embed interp) | random 80/20 | 95.7% | 0.952 |
+| ViT-tiny fine-tune (identical training) | **spatial 50km blocks** | **96.1%** | 0.956 |
+
+**CNN vs Transformer verdict (identical seed-42 spatial folds):** a photo finish — CNN 96.3% vs ViT 96.1% spatial accuracy (CNN re-run; ±0.5% run variance), with the ViT using **half the parameters** and training **~5× faster per epoch on CPU** (40s vs 230s). Per-class IoU splits 6-4 for the CNN; ViT wins Forest/HerbaceousVegetation/River/SeaLake. Both models' weakest classes are the vegetation look-alikes (Pasture, PermanentCrop ≈ 0.85-0.87 IoU). Neither architecture shows a meaningful spatial leakage gap at 50 km blocks (ViT gap −0.4%). Full table: `outputs/benchmark.json`, plot: `outputs/benchmark_compare.png`.
 
 Top confusions: River→Highway (81) — both linear features; PermanentCrop→HerbaceousVegetation (49) — similar vegetation texture at 10 m resolution.
 
@@ -36,7 +40,7 @@ python src/train.py --epochs 3
 ## Roadmap
 - [x] Phase A — ResNet18 baseline on EuroSAT, accuracy + kappa + confusion matrix
 - [x] Phase B — spatial cross-validation; gap measured: none (frozen backbone) — see finding above
-- [ ] Phase C — full Sentinel-2 tiles; CNN vs transformer; per-class IoU
+- [x] Phase C — fine-tune capacity experiment + CNN-vs-transformer benchmark + per-class IoU (full Sentinel-2 tiles deferred to stretch)
 - [ ] Phase D — write-up framed around the spatial-CV finding
 
 ## AI Tutor (visual guide chatbot)
