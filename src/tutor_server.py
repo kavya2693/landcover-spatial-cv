@@ -48,9 +48,37 @@ tiny 5,130-param head lacks capacity to memorize places; Phase C will test if fi
 params reopens the gap. Coordinates came from GeoTIFF tags (tiepoint/scale/EPSG) via tifffile."""
 
 CONTEXT = f"""You are a warm ML tutor inside an interactive guide. The student is a beginner
-building a EuroSAT land-cover classifier (27,000 Sentinel-2 patches, 64x64, 10 classes; ResNet18
-frozen-backbone 85.1% acc / kappa 0.834; full fine-tune 96.4% random / 95.8% spatial; ViT-tiny
-benchmark 96.1% spatial). She is preparing for ML interviews. {SECTION_MAP}"""
+building a EuroSAT land-cover classifier and will defend it as her own work in interviews, so be
+SPECIFIC and ACCURATE about what THIS project actually did — never give a generic concept card when
+she asks what she did.
+
+EXACT PROJECT FACTS (use these precise details when she asks "what did I do"):
+- Data: EuroSAT RGB, 27,000 Sentinel-2 patches, 64x64x3, 10 classes (AnnualCrop, Forest,
+  HerbaceousVegetation, Highway, Industrial, Pasture, PermanentCrop, Residential, River, SeaLake).
+- Preprocessing (src/train.py): transforms.ToTensor() then transforms.Normalize with ImageNet
+  stats mean=[0.485,0.456,0.406], std=[0.229,0.224,0.225]. No data augmentation in the baseline.
+- Split: 80/20 train/val, fixed seed 42 (reproducible). Spatial variant: whole 50km blocks held out.
+- Phase A model: ResNet18 ImageNet-pretrained, backbone FROZEN, new 512->10 head (only 5,130 of
+  11.2M params train). Loss: CrossEntropyLoss. Optimizer: Adam, lr=1e-3, batch_size=128, 3 epochs, CPU.
+  Result: 85.1% val accuracy, Cohen's kappa 0.834. Top confusions River->Highway 81, PermanentCrop->HerbaceousVegetation 49.
+- Phase B: recovered patch coordinates from GeoTIFF tags (tiepoint/scale/EPSG via tifffile), spatial
+  50km-block CV. Frozen result: random 85.2% vs spatial 85.6% = NO leakage gap (honest null).
+- Phase C: full fine-tune (discriminative LRs, backbone 1e-4 / head 1e-3) -> 96.4% random / 95.8%
+  spatial; gap reopened to +0.7% (capacity hypothesis confirmed). ViT-tiny@64px benchmark: 96.1%
+  spatial (photo finish vs CNN 96.3%); per-class IoU, both weakest on Pasture/PermanentCrop ~0.85.
+
+She is preparing for ML interviews. {SECTION_MAP}"""
+
+# Recall-style questions ("what did I do", "my", "in this project") want SPECIFIC project
+# facts, not a generic concept card — route these straight to Claude (which has the facts above).
+RECALL_MARKERS = ("what did i", "what was my", "what was the", "did i use", "how did i",
+                  "in this project", "in my project", "my model", "we used", "i used",
+                  "what i did", "which optimizer", "what optimizer", "what hyperparam")
+
+
+def is_recall(question: str) -> bool:
+    q = question.lower()
+    return any(m in q for m in RECALL_MARKERS)
 
 # Fast path: text only — ~8-15s on the fast model vs ~90s with an animation.
 SYSTEM_PROMPT_TEXT = f"""{CONTEXT}
@@ -185,9 +213,11 @@ class TutorHandler(SimpleHTTPRequestHandler):
             if not question:
                 self.send_error(400, "expected JSON {question: ...}")
                 return
-            # force_ai: the "ask Claude instead" escape hatch when a KB card
-            # was related-but-not-exactly what she asked
-            kb = None if payload.get("force_ai") else kb_answer(question)
+            # Skip the keyword KB for: (a) the explicit "ask Claude" escape
+            # hatch, or (b) recall questions that need SPECIFIC project facts
+            # rather than a generic concept card.
+            skip_kb = payload.get("force_ai") or is_recall(question)
+            kb = None if skip_kb else kb_answer(question)
             self._send_json(kb or ask_model(question) or apology())
         elif self.path == "/draw":
             result = draw_visual(str(payload.get("question", ""))[:2000],
