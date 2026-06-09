@@ -39,6 +39,7 @@
   <button class="mtab" data-panel="phasec">🚀 Phase C: The Sequel</button>
   <button class="mtab" data-panel="quiz">🎯 Quiz</button>
   <button class="mtab" data-panel="faq">❓ FAQ</button>
+  <button class="mtab" data-panel="arch">🏗️ Architecture</button>
 </div>
 
 <!-- ════════════════ TAB: OVERVIEW ════════════════ -->
@@ -204,6 +205,19 @@
   <div id="faqList"><p class="dim">Loading…</p></div>
   <p class="dim" id="faqNoMatch" style="display:none">No match — ask the 💬 tutor on the right; it knows 15 concepts instantly.</p>
 </div><!-- /panel-faq -->
+
+<!-- ════════════════ TAB: ARCHITECTURE ════════════════ -->
+<div class="panel" id="panel-arch">
+  <h2 style="margin-top:10px">🏗️ The pipeline, end to end</h2>
+  <p class="dim">Every stage of YOUR project, in order. Tap any box to expand the details and the real numbers — this is your "walk me through your architecture" interview answer, made clickable.</p>
+  <div class="archLegend">
+    <span><i class="archDot" style="background:#7bc88a"></i> Data</span>
+    <span><i class="archDot" style="background:#5fa8e0"></i> Model</span>
+    <span><i class="archDot" style="background:#e0b25f"></i> Evaluation</span>
+    <span><i class="archDot" style="background:#c98ad0"></i> Output</span>
+  </div>
+  <div id="archFlow"></div>
+</div><!-- /panel-arch -->
 </div>
 
 <script>
@@ -463,6 +477,32 @@ document.getElementById('spatialBtn').addEventListener('click', () => {
   .faqItem.open .faqQ::after { content:'−'; }
   .faqA { display:none; padding:0 16px 13px; font-size:.9em; color:#c6d2de; border-top:1px solid #2a3542; padding-top:10px; }
   .faqItem.open .faqA { display:block; }
+  /* ---- architecture diagram ---- */
+  #archFlow { display:flex; flex-direction:column; align-items:center; gap:0; }
+  .archStage { width:100%; max-width:540px; border-radius:12px; padding:14px 16px 14px 52px; position:relative;
+    cursor:pointer; border:1px solid #2a3542; transition:transform .12s, box-shadow .12s; }
+  .archStage:hover { transform:translateY(-2px); box-shadow:0 6px 18px rgba(0,0,0,.4); }
+  .archStage .num { position:absolute; left:12px; top:14px; width:28px; height:28px; border-radius:50%;
+    background:#0f1419; border:2px solid currentColor; text-align:center; line-height:25px; font-weight:700; font-size:.85em; }
+  .archStage .ttl { font-weight:700; font-size:1em; }
+  .archStage .sub { font-size:.82em; color:var(--dim); margin-top:2px; }
+  .archStage .det { display:none; margin-top:10px; padding-top:10px; border-top:1px solid #2a3542; font-size:.86em; color:#c6d2de; }
+  .archStage.open .det { display:block; }
+  .archStage.open { max-width:600px; }
+  .zone-data { background:#1a2a1e; color:#7bc88a; }
+  .zone-model { background:#1a2433; color:#5fa8e0; }
+  .zone-eval { background:#332a1a; color:#e0b25f; }
+  .zone-out { background:#2a1a2e; color:#c98ad0; }
+  .archArrow { color:var(--dim); font-size:1.4em; line-height:1; margin:3px 0; }
+  .archDiamond { width:200px; min-height:90px; margin:6px 0; display:flex; align-items:center; justify-content:center;
+    text-align:center; background:#332a1a; color:var(--warn); border:1px solid var(--warn);
+    transform:rotate(45deg); border-radius:10px; }
+  .archDiamond span { transform:rotate(-45deg); font-size:.82em; font-weight:600; padding:8px; }
+  .archBranch { display:flex; gap:24px; justify-content:center; font-size:.82em; margin:4px 0; }
+  .archBranch b { color:var(--good); } .archBranch i { color:var(--bad); font-style:normal; }
+  .archLegend { display:flex; gap:14px; flex-wrap:wrap; justify-content:center; margin:14px 0; font-size:.8em; }
+  .archLegend span { display:flex; align-items:center; gap:5px; }
+  .archDot { width:12px; height:12px; border-radius:3px; display:inline-block; }
 </style>
 
 <div id="fileBanner"><b>💬 To activate the AI tutor:</b> open Terminal and run<br>
@@ -871,6 +911,47 @@ then visit <a href="http://localhost:8787/visual_guide.html" style="color:#ffcc8
     renderFaq(faqs.filter(f => (f.q + ' ' + f.a + ' ' + f.topic).toLowerCase().includes(needle)));
   });
   loadFaq();
+
+  // ---- Architecture diagram (data-driven; edit STAGES to change it) ----
+  const STAGES = [
+    {n:1, zone:'data', icon:'🛰️', t:'Data source — EuroSAT', s:'27,000 Sentinel-2 patches, 64×64, 10 classes',
+     d:'Free labelled satellite imagery from the Sentinel-2 mission. Downloaded via torchvision (RGB, ~90MB). Each patch is one of 10 land-cover types; the folder name is the label (ImageFolder format). For Phase B, the real-world coordinates of all 27k patches were recovered from the multispectral GeoTIFF metadata tags.'},
+    {n:2, zone:'data', icon:'⚙️', t:'Preprocessing', s:'ToTensor → ImageNet normalize',
+     d:'Each image is converted to a tensor then normalized with ImageNet stats (mean [0.485,0.456,0.406], std [0.229,0.224,0.225]) so inputs match what the pretrained backbone expects. No data augmentation in the baseline (a known easy upgrade).'},
+    {n:3, zone:'data', icon:'✂️', t:'Train / validation split', s:'DECISION → random 80/20 vs spatial 50km blocks', diamond:true,
+     d:'The split choice is the heart of the project. A random 80/20 split (seed 42) is standard but can leak: neighbouring patches of the same place land on both sides. The spatial split holds out whole 50km geographic blocks so the model is tested on land it never saw — the honest test.'},
+    {n:4, zone:'model', icon:'🧠', t:'Model — ResNet18 / ViT', s:'frozen backbone → fine-tuned → transformer',
+     d:'Phase A: ResNet18 pretrained on ImageNet, backbone FROZEN, only a new 512→10 head trains (5,130 of 11.2M params). Phase C: full fine-tune of all 11.2M params, and a ViT-tiny transformer benchmarked at native 64px.'},
+    {n:5, zone:'model', icon:'🔁', t:'Training loop', s:'Adam, CrossEntropy, lr 1e-3, batch 128, 3 epochs, CPU',
+     d:'Guess → measure loss → adjust weights, repeated over 21,600 training images per epoch, for 3 epochs, on a laptop CPU (~140s/epoch frozen). Fine-tuning used discriminative learning rates: backbone 1e-4, head 1e-3.'},
+    {n:6, zone:'eval', icon:'📊', t:'Evaluation', s:'accuracy · Cohen’s kappa · confusion matrix · per-class IoU',
+     d:'Reported on held-out data: overall accuracy, Cohen’s kappa (luck-corrected), a confusion matrix (top error River→Highway 81×), and per-class IoU. The signature metric is the random-vs-spatial gap that exposes leakage.'},
+    {n:7, zone:'eval', icon:'🔬', t:'The honest finding', s:'frozen: no gap · fine-tuned: +0.7% gap reopens',
+     d:'Frozen backbone: 85.2% random vs 85.6% spatial — NO leakage gap (capacity too small to memorize places). Fine-tuned: 96.4% random vs 95.8% spatial — the gap reopened exactly as predicted. ViT photo-finish: 96.1% spatial.'},
+    {n:8, zone:'out', icon:'📦', t:'Outputs & learning hub', s:'metrics.json · plots · this interactive guide',
+     d:'Reproducible artifacts (metrics JSON, confusion matrix, comparison plots) plus this learning hub + AI tutor. The repo is public: github.com/kavya2693/landcover-spatial-cv. The honest headline number is 95.8% on unseen geography.'},
+  ];
+  function renderArch() {
+    const flow = $('archFlow'); flow.innerHTML = '';
+    STAGES.forEach((st, i) => {
+      if (st.diamond) {
+        const dia = document.createElement('div'); dia.className = 'archDiamond';
+        dia.innerHTML = `<span>❓ Random or<br>Spatial split?</span>`;
+        const box = document.createElement('div'); box.style.cssText = 'display:flex;justify-content:center;margin:22px 0';
+        box.appendChild(dia); flow.appendChild(box);
+        const br = document.createElement('div'); br.className = 'archBranch';
+        br.innerHTML = `<b>Spatial → honest 95.8%</b> <i>Random → flatters 96.4%</i>`;
+        flow.appendChild(br);
+      }
+      const card = document.createElement('div'); card.className = 'archStage zone-' + st.zone;
+      card.innerHTML = `<div class="num">${st.n}</div><div class="ttl">${st.icon} ${st.t}</div>` +
+        `<div class="sub">${st.s}</div><div class="det">${st.d}</div>`;
+      card.addEventListener('click', () => card.classList.toggle('open'));
+      flow.appendChild(card);
+      if (i < STAGES.length - 1) { const a = document.createElement('div'); a.className = 'archArrow'; a.textContent = '▼'; flow.appendChild(a); }
+    });
+  }
+  renderArch();
 })();
 </script>
 </body>
